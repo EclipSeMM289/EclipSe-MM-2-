@@ -162,7 +162,7 @@ class PainelTicketV2(discord.ui.LayoutView):
         )
 
         container.add_item(
-            discord.ui.MediaGallery(
+           discord.MediaGalleryItem
                 discord.ui.MediaGalleryItem(URL_IMAGEM_TICKET)
             )
         )
