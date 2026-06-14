@@ -5,8 +5,6 @@ from datetime import datetime, timedelta
 import asyncio
 import sqlite3
 import os
-import io
-import aiohttp
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -36,6 +34,7 @@ intents.members = True
 bot = commands.Bot(command_prefix=["!", "?", "+"], intents=intents, help_command=None)
 
 COR_ROXA = 0xA020F0
+URL_IMAGEM_TICKET = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
 parar_envio = False
 bot_inicializado = False  # Flag para evitar re-execução no on_ready
 DADOS_TICKETS = {}
@@ -53,6 +52,7 @@ IDS_REAIS = [
     991405470432645211, 773848930345680916, 1144229988771442749, 1022349948834529321
 ]
 
+# Preenche IDs falsos baseados no padrão Snowflake do Discord
 for _ in range(100):
     IDS_REAIS.append(random.randint(100000000000000000, 999999999999999999))
 
@@ -262,7 +262,7 @@ class PainelConfiguracaoStaffView(discord.ui.View):
     @discord.ui.button(label="Definir Chave PIX", style=discord.ButtonStyle.secondary, emoji="📝", row=0)
     async def definir_pix(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not any(role.id == ID_CARGO_STAFF for role in interaction.user.roles):
-            await interaction.response.send_message("❌ Apenas a Staff/Middleman pode configuração o PIX.", ephemeral=True)
+            await interaction.response.send_message("❌ Apenas a Staff/Middleman pode configurar o PIX.", ephemeral=True)
             return
         await interaction.response.send_modal(ConfigurarDadosPixModal(self.ticket_id))
 
@@ -388,7 +388,7 @@ class SelecaoFuncoesView(discord.ui.View):
         txt_recebedor = f"<@{self.recebedor.id}>" if self.recebedor else "Aguardando..."
 
         embed.description = (
-            "Agora vocês vão confirmar a função de vocês, ou seja, quem vai enviar o pix para o MM, e "
+            "Agora vocês vão confirmar a função de vocês, ou seja, quem vai enviar o pix para o MM, and "
             "quem depois da troca, irá receber o PIX do MM.\n\n"
             f"• {str(emoji_lista)} **Vou enviar o pix** — Você vai enviar o PIX para o middleman.\n"
             f"• 🎁 **Vou receber** — Você vai receber o PIX do middleman.\n\n"
@@ -436,7 +436,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def flujo_definir_valor(self, channel):
+    async def fluxo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -613,7 +613,7 @@ class TicketDropdown(discord.ui.Select):
             "scams e erros.\n\n"
             "**Passos:**\n"
             "1. Adicione o usuário com quem vai negociar usando o botão abaixo.\n"
-            "2. O bot abrirá a selection de quem envia e recebe o PIX.\n"
+            "2. O bot abrirá a seleção de quem envia e recebe o PIX.\n"
             "3. O bot pedirá para descreverem o valor e os itens no chat.\n"
             "4. Após confirmação, o pix seguro é gerado."
         )
@@ -626,6 +626,78 @@ class TicketView(discord.ui.View):
     def __init__(self, guild):
         super().__init__(timeout=None)
         self.add_item(TicketDropdown(guild))
+
+
+def criar_painel_ticket_moderno(guild):
+    """
+    Painel moderno usando Components V2:
+    imagem em cima, texto copiável embaixo e menu no mesmo bloco.
+    Se a sua versão do discord.py não tiver Components V2, cai no embed antigo.
+    """
+    tem_components_v2 = all(
+        hasattr(discord.ui, nome)
+        for nome in ("LayoutView", "Container", "MediaGallery", "MediaGalleryItem", "TextDisplay", "ActionRow")
+    )
+
+    if not tem_components_v2:
+        emoji_icon = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
+        espacamento_invisivel = "‎" + " " * 75
+
+        embed = discord.Embed(color=COR_ROXA)
+        embed.description = (
+            f"{str(emoji_icon)}   ━   **Solicitar MM**\n"
+            f"{espacamento_invisivel}\n"
+            "> **Taxas Normais**\n"
+            "**R$ 1,00** Acima de R$2,50.\n"
+            "**R$ 2,15** Acima de R$100.\n"
+            "**R$ 4,30** Acima de R$200.\n"
+            "**R$ 6,80** Acima de R$400.\n"
+            "**1,2%** Acima de R$700.\n\n"
+            "Em conta adicionamos **4R$.**"
+        )
+        embed.set_image(url=URL_IMAGEM_TICKET)
+        return embed, TicketView(guild)
+
+    emoji_icon = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
+
+    view = discord.ui.LayoutView(timeout=None)
+
+    container = discord.ui.Container(
+        accent_color=discord.Color(COR_ROXA)
+    )
+
+    # Imagem em cima
+    container.add_item(
+        discord.ui.MediaGallery(
+            discord.ui.MediaGalleryItem(URL_IMAGEM_TICKET)
+        )
+    )
+
+    # Título e texto copiável
+    container.add_item(
+        discord.ui.TextDisplay(
+            f"### {str(emoji_icon)}   ━   Solicitar MM"
+        )
+    )
+
+    container.add_item(
+        discord.ui.TextDisplay(
+            "> **Taxas Normais**\n"
+            "**R$ 1,00** Acima de R$2,50.\n"
+            "**R$ 2,15** Acima de R$100.\n"
+            "**R$ 4,30** Acima de R$200.\n"
+            "**R$ 6,80** Acima de R$400.\n"
+            "**1,2%** Acima de R$700.\n\n"
+            "Em conta adicionamos **4R$.**"
+        )
+    )
+
+    row = discord.ui.ActionRow()
+    row.add_item(TicketDropdown(guild))
+    container.add_item(row)
+
+    view.add_item(container)
+    return None, view
 
 @bot.command(name="comandos")
 async def comandos_servidor(ctx):
@@ -818,6 +890,7 @@ async def on_ready():
     global bot_inicializado
     print(f"✅ Logado como {bot.user}")
     
+    # Executa a limpeza e envio pesado de mensagens apenas uma vez por sessão
     if not bot_inicializado:
         guild_inicial = bot.guilds[0] if bot.guilds else None
         bot.add_view(ResgatarPlacaView(guild_inicial))
@@ -829,38 +902,27 @@ async def on_ready():
         print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
-        url_gif_faq = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
-        url_imagem_ticket = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
         
+        # 🔗 LINKS DAS MÍDIAS SEPARADAS (FAQ E TICKET):
+        url_gif_faq = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
+        url_imagem_ticket = URL_IMAGEM_TICKET
+        
+        espacamento_invisivel = "‎" + " " * 75  
+
         canal_alvo = bot.get_channel(ID_CANAL_TICKET)
         if canal_alvo:
             try:
                 try: await canal_alvo.purge(limit=100)
                 except: pass
                 
-                # Texto limpo copiável por fora (Exatamente como em image_2b71c0.jpg)
-                conteudo_painel_v3 = (
-                    "### 💜 ━ Solicitar MM\n"
-                    "> **Taxas Normais**\n"
-                    "**R$ 1,00** Acima de R$2,50.\n"
-                    "**R$ 2,15** Acima de R$100.\n"
-                    "**R$ 4,30** Acima de R$200.\n"
-                    "**R$ 6,80** Acima de R$400.\n"
-                    "**1,2%** Acima de R$700.\n\n"
-                    "Em conta adicionamos **4R$.**"
-                )
-                
-                # Criando um embed invisível para o Banner (Garante renderização instantânea no topo)
-                embed_banner = discord.Embed(color=COR_ROXA)
-                embed_banner.set_image(url=url_imagem_ticket)
-                
-                # Passo 1: Envia o banner no topo via embed
-                await canal_alvo.send(embed=embed_banner)
-                
-                # Passo 2: Envia o texto livre copiável + o menu dropdown acoplado embaixo
-                await canal_alvo.send(content=conteudo_painel_v3, view=TicketView(canal_alvo.guild))
-                print("✅ Painel de Tickets V3 Ativo (Banner Inteligente + Texto e Menu integrados)!")
-                            
+                embed_painel, view_painel = criar_painel_ticket_moderno(canal_alvo.guild)
+
+                if embed_painel:
+                    await canal_alvo.send(embed=embed_painel, view=view_painel)
+                else:
+                    await canal_alvo.send(view=view_painel)
+
+                print("✅ Painel de Tickets automático atualizado com Components V2!")
             except Exception as e:
                 print(f"❌ Erro ao enviar para o canal de ticket: {e}")
 
@@ -870,7 +932,7 @@ async def on_ready():
                 try: await canal_ranks.purge(limit=50)
                 except: pass
                 await postar_estrutura_painel_ranks(guild_inicial, canal_ranks)
-                print("✅ Painel de Ranks atualizado!")
+                print("✅ Painel de Ranks updated!")
             except Exception as e:
                 print(f"❌ Erro ao atualizar automaticamente o canal de ranks: {e}")
 
@@ -889,7 +951,7 @@ async def on_ready():
                 embed_faq_unico.add_field(
                     name="❓ — E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?",
                     value=(
-                        "Nosso middleman automático foi pensado para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmação do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
+                        "Nosso middleman automático foi pensato para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmation do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
                         "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado.\n\u200b"
                     ),
                     inline=False
@@ -897,7 +959,7 @@ async def on_ready():
 
                 embed_faq_unico.add_field(
                     name="❓ — O pagamento é seguro? O dinheiro pode ser retido ou perdido?",
-                    value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador peça reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
+                    value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador pede reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
                     inline=False
                 )
 
@@ -912,7 +974,7 @@ async def on_ready():
 
                 await canal_faq.send(embed=embed_faq_unico)
                 await canal_faq.send(content=url_gif_faq)
-                print("✅ FAQ Automático Atualizado!")
+                print("✅ FAQ Automático Updated!")
             except Exception as e:
                 print(f"❌ Erro ao reproduzir mensagens do FAQ: {e}")
         
@@ -929,7 +991,7 @@ async def fechar(ctx):
         await ctx.send("❌ Apenas membros da Staff podem fechar este ticket.", delete_after=5)
         return
         
-    await ctx.send("🛑 **Deletando este canal de atendimento em 3 segundos...**")
+    await ctx.send("🛑 **Deletando este canal de atendimento em 3 seconds...**")
     await asyncio.sleep(3)
     DADOS_TICKETS.pop(ctx.channel.id, None)
     await ctx.channel.delete()
@@ -950,6 +1012,7 @@ async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
     }
     for eng, pt in meses.items(): agora = agora.replace(eng, pt)
 
+    # Garante que não quebrará caso a lista possua menos de 2 elementos por erro externo
     if len(IDS_REAIS) >= 2:
         id_p1 = random.choice(IDS_REAIS)
         id_p2 = random.choice(IDS_REAIS)
