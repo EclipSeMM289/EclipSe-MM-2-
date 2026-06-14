@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import os
 from dotenv import load_dotenv
+import asyncio
 
 load_dotenv()
 
@@ -35,31 +36,19 @@ class PainelInternoTicketView(discord.ui.View):
         emoji_add = pegar_emoji(guild, "discotoolsxyzicon27", "➕")
         emoji_cancel = pegar_emoji(guild, "discotoolsxyzicon28", "❌")
 
-        self.btn_add = discord.ui.Button(
-            label="Adicionar por ID",
-            style=discord.ButtonStyle.secondary,
-            emoji=emoji_add
-        )
+        self.btn_add = discord.ui.Button(label="Adicionar por ID", style=discord.ButtonStyle.secondary, emoji=emoji_add)
         self.btn_add.callback = self.adicionar_id_callback
         self.add_item(self.btn_add)
 
-        self.btn_cancel = discord.ui.Button(
-            label="Cancelar Ticket",
-            style=discord.ButtonStyle.secondary,
-            emoji=emoji_cancel
-        )
+        self.btn_cancel = discord.ui.Button(label="Cancelar Ticket", style=discord.ButtonStyle.secondary, emoji=emoji_cancel)
         self.btn_cancel.callback = self.cancelar_ticket_callback
         self.add_item(self.btn_cancel)
 
     async def adicionar_id_callback(self, interaction: discord.Interaction):
-        await interaction.response.send_message(
-            "Use o sistema de adicionar usuário aqui.",
-            ephemeral=True
-        )
+        await interaction.response.send_message("Use o sistema de adicionar usuário aqui.", ephemeral=True)
 
     async def cancelar_ticket_callback(self, interaction: discord.Interaction):
         await interaction.response.send_message("🛑 Ticket será fechado em 5 segundos...")
-        import asyncio
         await asyncio.sleep(5)
         await interaction.channel.delete()
 
@@ -70,16 +59,8 @@ class TicketDropdown(discord.ui.Select):
         emoji_cross = pegar_emoji(guild, "discotoolsxyzicon26", "❌")
 
         options = [
-            discord.SelectOption(
-                label="Trade PIX",
-                description="Intermediação de pagamento PIX",
-                emoji=emoji_pix
-            ),
-            discord.SelectOption(
-                label="Cross Trade",
-                description="Indisponível no momento",
-                emoji=emoji_cross
-            )
+            discord.SelectOption(label="Trade PIX", description="Intermediação de pagamento PIX", emoji=emoji_pix),
+            discord.SelectOption(label="Cross Trade", description="Indisponível no momento", emoji=emoji_cross),
         ]
 
         super().__init__(
@@ -95,10 +76,7 @@ class TicketDropdown(discord.ui.Select):
         escolha = self.values[0]
 
         if escolha == "Cross Trade":
-            await interaction.response.send_message(
-                "❌ Esta opção de transação está indisponível no momento.",
-                ephemeral=True
-            )
+            await interaction.response.send_message("❌ Esta opção de transação está indisponível no momento.", ephemeral=True)
             return
 
         categoria = guild.get_channel(ID_CATEGORIA_TICKETS)
@@ -107,7 +85,7 @@ class TicketDropdown(discord.ui.Select):
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(read_messages=False),
             membro: discord.PermissionOverwrite(read_messages=True, send_messages=True),
-            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True)
+            guild.me: discord.PermissionOverwrite(read_messages=True, send_messages=True, manage_channels=True),
         }
 
         if cargo_staff:
@@ -119,10 +97,7 @@ class TicketDropdown(discord.ui.Select):
             overwrites=overwrites
         )
 
-        await interaction.response.send_message(
-            f"✅ Seu ticket foi criado em {channel.mention}!",
-            ephemeral=True
-        )
+        await interaction.response.send_message(f"✅ Seu ticket foi criado em {channel.mention}!", ephemeral=True)
 
         emoji_ticket = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
 
@@ -157,12 +132,6 @@ class PainelTicketV2(discord.ui.LayoutView):
 
         emoji_icon = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
 
-       class PainelTicketV2(discord.ui.LayoutView):
-    def __init__(self, guild):
-        super().__init__(timeout=None)
-
-        emoji_icon = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
-
         container = discord.ui.Container(
             accent_color=discord.Color(COR_ROXA)
         )
@@ -170,12 +139,6 @@ class PainelTicketV2(discord.ui.LayoutView):
         container.add_item(
             discord.ui.MediaGallery(
                 discord.MediaGalleryItem(URL_IMAGEM_TICKET)
-            )
-        )
-
-        container.add_item(
-            discord.ui.TextDisplay(
-                f"### {str(emoji_icon)}   ━   Solicitar MM"
             )
         )
 
