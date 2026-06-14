@@ -1,5 +1,4 @@
 import discord
-import aiohttp
 from discord.ext import commands, tasks
 import random
 from datetime import datetime, timedelta
@@ -858,14 +857,12 @@ async def on_ready():
                     color=COR_ROXA
                 )
                 
-        await canal_alvo.send(url_imagem_ticket)
-
-await canal_alvo.send(
-    embed=embed_unico,
-    view=TicketView(canal_alvo.guild)
-)
-
-print("✅ Painel de Tickets atualizado com imagem em cima!")
+                # Define a imagem dentro do mesmo objeto de embed
+                embed_unico.set_image(url=url_imagem_ticket)
+                
+                # Enviando o embed único e anexando o Dropdown de Transações
+                await canal_alvo.send(embed=embed_unico, view=TicketView(canal_alvo.guild))
+                print("✅ Painel de Tickets atualizado com sucesso (Embed Único)!")
             except Exception as e:
                 print(f"❌ Erro ao enviar para o canal de ticket: {e}")
 
