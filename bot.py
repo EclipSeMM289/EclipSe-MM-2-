@@ -300,7 +300,7 @@ class PainelConfiguracaoStaffView(discord.ui.View):
             return
 
         if not dados["confirmado_enviador"] or not dados["confirmado_recebedor"]:
-            await interaction.response.send_message("❌ **Bloqueado!** Ambos os clientes precisam clicar no botão de confirmation primeiro.", ephemeral=True)
+            await interaction.response.send_message("❌ **Bloqueado!** Ambos os clientes precisam clicar no botão de confirmação primeiro.", ephemeral=True)
             return
 
         tres_crases = chr(96) * 3
@@ -434,7 +434,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def flujo_definir_valor(self, channel):
+    async def fluxo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -827,41 +827,33 @@ async def on_ready():
         print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
-        url_gif_faq = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
+        url_gif_faq = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png" # Usado link estável alternativo para o exemplo
         url_imagem_ticket = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
         
-        espacamento_invisivel = "‎" + " " * 75  
-
         canal_alvo = bot.get_channel(ID_CANAL_TICKET)
         if canal_alvo:
             try:
                 try: await canal_alvo.purge(limit=100)
                 except: pass
                 
-                # 🟪 MONTAGEM DE UM ÚNICO EMBED (Usando a sua ordem de renderização bem-sucedida)
-                emoji_icon = pegar_emoji(canal_alvo.guild, "discotoolsxyzicon2", "🤝")
-                
-                embed_unico = discord.Embed(
-                    title=f"{str(emoji_icon)}   ━   Solicitar MM",
-                    description=(
-                        f"{espacamento_invisivel}\n"
-                        "> **Taxas Normais**\n"
-                        "**R$ 1,00** Acima de R$2,50.\n"
-                        "**R$ 2,15** Acima de R$100.\n"
-                        "**R$ 4,30** Acima de R$200.\n"
-                        "**R$ 6,80** Acima de R$400.\n"
-                        "**1,2%** Acima de R$700.\n\n"
-                        "Em conta adicionamos **4R$.**"
-                    ),
-                    color=COR_ROXA
+                # 🛠️ CONSTRUÇÃO DO PAINEL MODERNO (SEM EMBED):
+                # O link da imagem vem no topo, seguido das quebras de linha e do texto puro formatado.
+                # O Discord processa o link e joga a renderização da imagem para cima do texto automaticamente.
+                conteudo_painel_v2 = (
+                    f"{url_imagem_ticket}\n\n"
+                    "### 💜 ━ Solicitar MM\n"
+                    "> **Taxas Normais**\n"
+                    "**R$ 1,00** Acima de R$2,50.\n"
+                    "**R$ 2,15** Acima de R$100.\n"
+                    "**R$ 4,30** Acima de R$200.\n"
+                    "**R$ 6,80** Acima de R$400.\n"
+                    "**1,2%** Acima de R$700.\n\n"
+                    "Em conta adicionamos **4R$.**"
                 )
                 
-                # Aplica a imagem no embed único que gerou o visual correto
-                embed_unico.set_image(url=url_imagem_ticket)
-                
-                # Enviando e acoplando a View do Dropdown de tickets
-                await canal_alvo.send(embed=embed_unico, view=TicketView(canal_alvo.guild))
-                print("✅ Painel de Tickets atualizado com sucesso (Embed Único)!")
+                # Enviando direto como string de conteúdo acoplado com a View do Dropdown
+                await canal_alvo.send(content=conteudo_painel_v2, view=TicketView(canal_alvo.guild))
+                print("✅ Painel de Tickets V2 (Imagem no topo + texto copiável) postado com sucesso!")
             except Exception as e:
                 print(f"❌ Erro ao enviar para o canal de ticket: {e}")
 
