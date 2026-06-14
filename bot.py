@@ -79,7 +79,7 @@ def inicializar_banco():
 
 inicializar_banco()
 
-def obtener_saldo(user_id: int) -> float:
+def obter_saldo(user_id: int) -> float:
     conn = sqlite3.connect("database_ranks.db")
     cursor = conn.cursor()
     cursor.execute("SELECT total_movimentado FROM usuarios WHERE user_id = ?", (user_id,))
@@ -91,7 +91,6 @@ def adicionar_saldo(user_id: int, valor: float) -> float:
     conn = sqlite3.connect("database_ranks.db")
     cursor = conn.cursor()
     cursor.execute("INSERT OR IGNORE INTO usuarios (user_id, total_movimentado) VALUES (?, 0.0)", (user_id,))
-    # CORRIGIDO: Ordem correta dos parâmetros e remoção da quebra de sintaxe
     cursor.execute("UPDATE usuarios SET total_movimentado = total_movimentado + ? WHERE user_id = ?", (valor, user_id))
     conn.commit()
     
@@ -452,7 +451,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def flujo_definir_valor(self, channel):
+    async def fluxo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -486,7 +485,7 @@ class SelecaoFuncoesView(discord.ui.View):
                 await channel.delete()
                 break
 
-    async def flujo_definir_item(self, channel, valor_definido):
+    async def fluxo_definir_item(self, channel, valor_definido):
         emoji_item = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_item)}   ━   Definir Item",
@@ -583,7 +582,7 @@ class PainelInternoTicketView(discord.ui.View):
         await interaction.response.send_modal(AdicionarIDModal())
 
     async def cancelar_ticket_callback(self, interaction: discord.Interaction):
-        await interaction.response.send_message("🛑 **Este ticket será fechado e deletado em 5 segundos...**")
+        await interaction.response.send_message("🛑 **Este ticket será fechado e deletado em 5 seconds...**")
         await asyncio.sleep(5)
         DADOS_TICKETS.pop(interaction.channel.id, None)
         await interaction.channel.delete()
@@ -701,7 +700,7 @@ async def ver_perfil_rank(ctx, membro: discord.Member = None):
     await ctx.send(embed=embed)
 
 # ==========================================
-# 👑 COMANDOS EXCLUSIVOS DA STAFF
+# 👑 COMANDOS EXCLUSIVOS DA STAFF (CORRIGIDO)
 # ==========================================
 @bot.command(name="enviarpainel")
 @commands.has_permissions(administrator=True)
@@ -709,7 +708,13 @@ async def enviar_painel_principal(ctx):
     try: await ctx.message.delete()
     except: pass
 
-    canal_faq = bot.get_channel(ID_CANAL_FAQ)
+    # --- 🛠️ 1. ENVIO DO PAINEL DE TICKETS / FAQ ---
+    canal_faq = None
+    try:
+        canal_faq = await bot.fetch_channel(ID_CANAL_FAQ)
+    except:
+        canal_faq = ctx.channel
+
     if canal_faq:
         try: await canal_faq.purge(limit=50)
         except: pass
@@ -729,7 +734,13 @@ async def enviar_painel_principal(ctx):
         )
         await canal_faq.send(embed=embed_faq, view=TicketView(ctx.guild))
 
-    canal_ranks = bot.get_channel(ID_CANAL_RANKS)
+    # --- 🏆 2. ENVIO DO PAINEL DE RANKS / CARGOS ---
+    canal_ranks = None
+    try:
+        canal_ranks = await bot.fetch_channel(ID_CANAL_RANKS)
+    except:
+        canal_ranks = ctx.channel
+
     if canal_ranks:
         try: await canal_ranks.purge(limit=50)
         except: pass
@@ -759,7 +770,7 @@ async def enviar_painel_principal(ctx):
         )
         await canal_ranks.send(embed=embed_ranks, view=ResgatarPlacaView(ctx.guild))
 
-    await ctx.send("✅ Painéis atualizados e enviados com sucesso nos canais configurados!", delete_after=5)
+    await ctx.send(f"✅ **Painéis processados!** Enviados em: FAQ (<#{canal_faq.id}>) e Ranks (<#{canal_ranks.id}>).", delete_after=10)
 
 @bot.command(name="hit")
 async def gerar_painel_suporte_scam(ctx):
@@ -857,7 +868,7 @@ async def registrar_vouches_comuns(ctx, quantidade: int = None):
             color=COR_ROXA,
             timestamp=datetime.utcnow() - timedelta(minutes=random.randint(1, 120))
         )
-        embed_vouch.add_field(name="👤 Comprador / Cliente:", value=f"<@{id_cliente_aleatorio}>", inline=True)
+        embed_vouch.add_field(name="👤 Comprador / Client:", value=f"<@{id_cliente_aleatorio}>", inline=True)
         embed_vouch.add_field(name="👑 Middleman Responsável:", value=f"<@{ID_MM_FIXO}>", inline=True)
         embed_vouch.add_field(name="💰 Valor da Transação:", value=f"`{formatar_valor(valor_aleatorio)}`", inline=False)
         embed_vouch.add_field(name="📊 Status no Banco:", value="✅ Sincronizado e Computado com Sucesso", inline=False)
