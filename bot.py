@@ -387,7 +387,7 @@ class SelecaoFuncoesView(discord.ui.View):
         txt_recebedor = f"<@{self.recebedor.id}>" if self.recebedor else "Aguardando..."
 
         embed.description = (
-            "Agora vocês vão confirmar a função de vocês, ou seja, quem vai enviar o pix para o MM, e "
+            "Agora vocês vão confirmar a função de vocês, ou seja, quem vai enviar o pix para o MM, and "
             "quem depois da troca, irá receber o PIX do MM.\n\n"
             f"• {str(emoji_lista)} **Vou enviar o pix** — Você vai enviar o PIX para o middleman.\n"
             f"• 🎁 **Vou receber** — Você vai receber o PIX do middleman.\n\n"
@@ -435,7 +435,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def flujo_definir_valor(self, channel):
+    async def fluxo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -810,7 +810,7 @@ async def loop_vouches_automaticos():
         valor_aleatorio = round(random.uniform(5.0, 1000.0), 2)
         
     if canal:
-        await gerador_de_vouch_base(canal, tipo_envio, valor_aleatorio, eh_big)
+        await gerador_de_vouch_base(canal, tipo_envio, valor_aleatorio, eh_big_vouch)
 
 @bot.event
 async def on_ready():
@@ -830,8 +830,10 @@ async def on_ready():
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
         
-        # 🔗 NOVO LINK DO GIF DIVISOR ATUALIZADO:
-        url_gif_divisor = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
+        # 🔗 LINKS DAS MÍDIAS SEPARADAS (FAQ E TICKET):
+        url_gif_faq = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
+        url_imagem_ticket = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
+        
         espacamento_invisivel = "‎" + " " * 75  
 
         canal_alvo = bot.get_channel(ID_CANAL_TICKET)
@@ -853,9 +855,9 @@ async def on_ready():
                     "**1,2%** Acima de R$700.\n\n"
                     "Em conta adicionamos **4R$.**"
                 )
-                embed.set_image(url=url_gif_divisor)
+                embed.set_image(url=url_imagem_ticket)
                 await canal_alvo.send(embed=embed, view=TicketView(canal_alvo.guild))
-                print("✅ Painel de Tickets automático updated!")
+                print("✅ Painel de Tickets automático atualizado com a imagem correta!")
             except Exception as e:
                 print(f"❌ Erro ao enviar para o canal de ticket: {e}")
 
@@ -906,7 +908,7 @@ async def on_ready():
                 )
 
                 await canal_faq.send(embed=embed_faq_unico)
-                await canal_faq.send(content=url_gif_divisor)
+                await canal_faq.send(content=url_gif_faq)
                 print("✅ FAQ Automático Updated!")
             except Exception as e:
                 print(f"❌ Erro ao reproduzir mensagens do FAQ: {e}")
