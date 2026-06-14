@@ -148,7 +148,7 @@ async def verificar_e_atualizar_rank(membro: discord.Member, canal_notificacao):
             emoji_up = pegar_emoji(guild, "discotoolsxyzicon2", "⭐")
             embed_up = discord.Embed(
                 title=f"{str(emoji_up)} RANK UP AUTOMÁTICO!",
-                description=f"🎉 {membro.mention} alcançou o total acumulado de **{formatar_valor(saldo)}** em negociações e subiu para o cargo **{cargo_alvo.mention}**!",
+                description=f"🎉 {membro.mention} alcançou o total acumulado de **{formatar_valor(saldo)}** in-game e subiu para o cargo **{cargo_alvo.mention}**!",
                 color=COR_ROXA
             )
             await canal_notificacao.send(embed=embed_up)
@@ -435,7 +435,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def flujo_definir_valor(self, channel):
+    async def fluxo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -829,7 +829,7 @@ async def on_ready():
         print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
-        url_gif_divisor = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
+        url_gif_divisor = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
         espacamento_invisivel = "‎" + " " * 75  
 
         canal_alvo = bot.get_channel(ID_CANAL_TICKET)
