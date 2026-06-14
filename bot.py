@@ -7,12 +7,22 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
+# ==========================================
+# 🔐 CARREGAMENTO E VALIDAÇÃO DO TOKEN
+# ==========================================
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
+if TOKEN is None:
+    raise ValueError(
+        "❌ ERRO: O token do Discord não foi encontrado!\n"
+        "Verifique se o seu arquivo '.env' está na mesma pasta do bot "
+        "ou se a variável 'DISCORD_TOKEN' foi passada nas configurações do seu container/Docker."
+    )
+
 # ==========================================
-# 📥 CONFIGURAÇÃO DE CANAIS E CARGOS:
+# 📥 CONFIGURAÇÃO DE CANAIS E CARGOS
 # ==========================================
 ID_CANAL_TICKET = 1512267548043776072
 ID_CANAL_FAQ = 1512267542461157536
@@ -81,7 +91,7 @@ def adicionar_saldo(user_id: int, valor: float) -> float:
     conn = sqlite3.connect("database_ranks.db")
     cursor = conn.cursor()
     cursor.execute("INSERT OR IGNORE INTO usuarios (user_id, total_movimentado) VALUES (?, 0.0)", (user_id,))
-    # CORRIGIDO: Removido o 'or' que quebrava o script e ajustada a ordem dos parâmetros (valor, user_id)
+    # CORRIGIDO: Ordem correta dos parâmetros e remoção da quebra de sintaxe
     cursor.execute("UPDATE usuarios SET total_movimentado = total_movimentado + ? WHERE user_id = ?", (valor, user_id))
     conn.commit()
     
@@ -91,7 +101,7 @@ def adicionar_saldo(user_id: int, valor: float) -> float:
     return novo_saldo
 
 # ==========================================
-# 🛠️ FUNÇÕES UTILIÁRIAS
+# 🛠️ FUNÇÕES UTILITÁRIAS
 # ==========================================
 def pegar_emoji(guild, nome, fallback):
     if guild:
@@ -442,7 +452,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def fluxo_definir_valor(self, channel):
+    async def flujo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -476,7 +486,7 @@ class SelecaoFuncoesView(discord.ui.View):
                 await channel.delete()
                 break
 
-    async def fluxo_definir_item(self, channel, valor_definido):
+    async def flujo_definir_item(self, channel, valor_definido):
         emoji_item = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_item)}   ━   Definir Item",
@@ -911,7 +921,6 @@ async def registrar_big_vouches(ctx, quantidade: int = None):
 async def on_ready():
     global bot_inicializado
     if not bot_inicializado:
-        # Carrega as views persistentes para os botões não pararem de funcionar ao reiniciar o bot
         bot.add_view(ResgatarPlacaView(None))
         bot_inicializado = True
     print(f"✅ Sistema operacional ativo com sucesso: {bot.user.name} online!")
