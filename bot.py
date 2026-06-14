@@ -262,7 +262,7 @@ class PainelConfiguracaoStaffView(discord.ui.View):
     @discord.ui.button(label="Definir Chave PIX", style=discord.ButtonStyle.secondary, emoji="📝", row=0)
     async def definir_pix(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not any(role.id == ID_CARGO_STAFF for role in interaction.user.roles):
-            await interaction.response.send_message("❌ Apenas a Staff/Middleman pode configurar o PIX.", ephemeral=True)
+            await interaction.response.send_message("❌ Apenas a Staff/Middleman pode configuração o PIX.", ephemeral=True)
             return
         await interaction.response.send_modal(ConfigurarDadosPixModal(self.ticket_id))
 
@@ -436,7 +436,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def fluxo_definir_valor(self, channel):
+    async def flujo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -838,8 +838,8 @@ async def on_ready():
                 try: await canal_alvo.purge(limit=100)
                 except: pass
                 
-                # Texto limpo sem o link exposto para não poluir
-                conteudo_painel_v2 = (
+                # Texto limpo copiável por fora (Exatamente como em image_2b71c0.jpg)
+                conteudo_painel_v3 = (
                     "### 💜 ━ Solicitar MM\n"
                     "> **Taxas Normais**\n"
                     "**R$ 1,00** Acima de R$2,50.\n"
@@ -850,20 +850,16 @@ async def on_ready():
                     "Em conta adicionamos **4R$.**"
                 )
                 
-                # Baixa a imagem em memória e envia como anexo nativo para forçar renderização no topo
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url_imagem_ticket) as resp:
-                        if resp.status == 200:
-                            data = io.BytesIO(await resp.read())
-                            arquivo_banner = discord.File(data, filename="banner.png")
-                            
-                            # Enviando o arquivo (topo), o texto (meio) e a View com o Dropdown (baixo)
-                            await canal_alvo.send(content=conteudo_painel_v2, file=arquivo_banner, view=TicketView(canal_alvo.guild))
-                            print("✅ Painel de Tickets V2 (Imagem no topo nativa + texto copiável) postado com sucesso!")
-                        else:
-                            # Fallback caso a URL do banner apresente erro
-                            await canal_alvo.send(content=conteudo_painel_v2, view=TicketView(canal_alvo.guild))
-                            print("⚠️ Banner indisponível, painel de tickets enviado apenas com texto.")
+                # Criando um embed invisível para o Banner (Garante renderização instantânea no topo)
+                embed_banner = discord.Embed(color=COR_ROXA)
+                embed_banner.set_image(url=url_imagem_ticket)
+                
+                # Passo 1: Envia o banner no topo via embed
+                await canal_alvo.send(embed=embed_banner)
+                
+                # Passo 2: Envia o texto livre copiável + o menu dropdown acoplado embaixo
+                await canal_alvo.send(content=conteudo_painel_v3, view=TicketView(canal_alvo.guild))
+                print("✅ Painel de Tickets V3 Ativo (Banner Inteligente + Texto e Menu integrados)!")
                             
             except Exception as e:
                 print(f"❌ Erro ao enviar para o canal de ticket: {e}")
