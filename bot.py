@@ -451,7 +451,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def fluxo_definir_valor(self, channel):
+    async def flujo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -666,7 +666,7 @@ async def comandos_servidor(ctx):
     embed_ajuda.add_field(
         name="👑 Comandos da Staff",
         value=(
-            "`?enviarpainel` - Atualiza e envia o painel de ranks com o botão de placas.\n"
+            "`?enviarpainel` - Atualiza e envia manualmente os painéis de FAQ e Ranks.\n"
             "`?hit` - Gera o painel de suporte contra scam/recuperação.\n"
             "`+desmute @membro` - Remove o castigo/timeout de um usuário.\n"
             "`?funcoes` - Força a inicialização imediata do painel de seleção no chat.\n"
@@ -700,77 +700,80 @@ async def ver_perfil_rank(ctx, membro: discord.Member = None):
     await ctx.send(embed=embed)
 
 # ==========================================
-# 👑 COMANDOS EXCLUSIVOS DA STAFF (CORRIGIDO)
+# 👑 ENVIADOR AUTOMÁTICO REESTRUTURADO (FAZ O ENVIO SEM PRECISAR DE COMANDO)
 # ==========================================
+async def executar_envio_automatico_paineis():
+    print("⏳ Aguardando sincronização com os servidores do Discord...")
+    await asyncio.sleep(5)  # Delay estratégico para evitar falta de cache na inicialização
+    
+    # --- 🛠️ 1. ENVIO DO PAINEL DE TICKETS / FAQ ---
+    try:
+        canal_faq = await bot.fetch_channel(ID_CANAL_FAQ)
+        if canal_faq:
+            try: await canal_faq.purge(limit=50)
+            except: pass
+            
+            emoji_ticket = pegar_emoji(canal_faq.guild, "discotoolsxyzicon2", "🤝")
+            embed_faq = discord.Embed(
+                title=f"{str(emoji_ticket)}   ━   SISTEMA DE INTERMEDIAÇÃO",
+                description=(
+                    "Para iniciar uma nova troca/venda via PIX de forma 100% segura usando nossa estrutura "
+                    "automatizada, abra o menu abaixo e selecione a opção desejada.\n\n"
+                    "**⚠️ Termos e Avisos Importantes:**\n"
+                    "• Certifique-se de que o outro participante está no servidor antes de chamá-lo.\n"
+                    "• Nunca realize transações diretas sem a confirmação de saldo retido do Middleman.\n"
+                    "• Guarde prints e grave toda a negociação/entrega dos itens para sua segurança."
+                ),
+                color=COR_ROXA
+            )
+            await canal_faq.send(embed=embed_faq, view=TicketView(canal_faq.guild))
+            print("✅ Painel de Tickets/FAQ enviado automaticamente com sucesso!")
+    except Exception as e:
+        print(f"❌ Falha ao enviar painel de FAQ automático: {e}")
+
+    # --- 🏆 2. ENVIO DO PAINEL DE RANKS / CARGOS ---
+    try:
+        canal_ranks = await bot.fetch_channel(ID_CANAL_RANKS)
+        if canal_ranks:
+            try: await canal_ranks.purge(limit=50)
+            except: pass
+            
+            emoji_rank = pegar_emoji(canal_ranks.guild, "discotoolsxyzicon2", "🏆")
+            embed_ranks = discord.Embed(
+                title=f"{str(emoji_rank)}   ━   SISTEMA DE RECOMPENSAS HISTÓRICAS",
+                description=(
+                    "Ao acumular movimentações dentro do nosso system de Middleman, você sobe automaticamente "
+                    "de Rank no servidor e desbloqueia novos cargos de prestígio!\n\n"
+                    "📜 **Lista de Cargos por Volume:**\n"
+                    "• **Trader Bronze:** R$ 0,01+\n"
+                    "• **Trader Prata:** R$ 500,00+\n"
+                    "• **Trader Ouro:** R$ 1.000,00+\n"
+                    "• **Trader Diamante:** R$ 5.000,00+\n"
+                    "• **Trader Ametista:** R$ 10.000,00+\n"
+                    "• **Trader Esmeralda:** R$ 25.000,00+\n"
+                    "• **Trader Rubi:** R$ 50.000,00+\n"
+                    "• **Trader Sáfira:** R$ 100.000,00+ *(Ganha Placa Física)*\n"
+                    "• **Trader Master:** R$ 200.000,00+\n"
+                    "• **Trader Obsidian:** R$ 400.000,00+\n\n"
+                    "📦 **Placa Física de Conquista:**\n"
+                    "Ao atingir o posto de **Trader Sáfira (R$ 100k+)**, você tem o direito de receber em sua residência "
+                    "uma placa física personalizada exclusiva do servidor com seu nome gravado!"
+                ),
+                color=COR_ROXA
+            )
+            await canal_ranks.send(embed=embed_ranks, view=ResgatarPlacaView(canal_ranks.guild))
+            print("✅ Painel de Ranks enviado automaticamente com sucesso!")
+    except Exception as e:
+        print(f"❌ Falha ao enviar painel de Ranks automático: {e}")
+
 @bot.command(name="enviarpainel")
 @commands.has_permissions(administrator=True)
 async def enviar_painel_principal(ctx):
+    """Permite forçar o reenvio manualmente se precisar"""
     try: await ctx.message.delete()
     except: pass
-
-    # --- 🛠️ 1. ENVIO DO PAINEL DE TICKETS / FAQ ---
-    canal_faq = None
-    try:
-        canal_faq = await bot.fetch_channel(ID_CANAL_FAQ)
-    except:
-        canal_faq = ctx.channel
-
-    if canal_faq:
-        try: await canal_faq.purge(limit=50)
-        except: pass
-        
-        emoji_ticket = pegar_emoji(ctx.guild, "discotoolsxyzicon2", "🤝")
-        embed_faq = discord.Embed(
-            title=f"{str(emoji_ticket)}   ━   SISTEMA DE INTERMEDIAÇÃO",
-            description=(
-                "Para iniciar uma nova troca/venda via PIX de forma 100% segura usando nossa estrutura "
-                "automatizada, abra o menu abaixo e selecione a opção desejada.\n\n"
-                "**⚠️ Termos e Avisos Importantes:**\n"
-                "• Certifique-se de que o outro participante está no servidor antes de chamá-lo.\n"
-                "• Nunca realize transações diretas sem a confirmação de saldo retido do Middleman.\n"
-                "• Guarde prints e grave toda a negociação/entrega dos itens para sua segurança."
-            ),
-            color=COR_ROXA
-        )
-        await canal_faq.send(embed=embed_faq, view=TicketView(ctx.guild))
-
-    # --- 🏆 2. ENVIO DO PAINEL DE RANKS / CARGOS ---
-    canal_ranks = None
-    try:
-        canal_ranks = await bot.fetch_channel(ID_CANAL_RANKS)
-    except:
-        canal_ranks = ctx.channel
-
-    if canal_ranks:
-        try: await canal_ranks.purge(limit=50)
-        except: pass
-        
-        emoji_rank = pegar_emoji(ctx.guild, "discotoolsxyzicon2", "🏆")
-        embed_ranks = discord.Embed(
-            title=f"{str(emoji_rank)}   ━   SISTEMA DE RECOMPENSAS HISTÓRICAS",
-            description=(
-                "Ao acumular movimentações dentro do nosso sistema de Middleman, você sobe automaticamente "
-                "de Rank no servidor e desbloqueia novos cargos de prestígio!\n\n"
-                "📜 **Lista de Cargos por Volume:**\n"
-                "• **Trader Bronze:** R$ 0,01+\n"
-                "• **Trader Prata:** R$ 500,00+\n"
-                "• **Trader Ouro:** R$ 1.000,00+\n"
-                "• **Trader Diamante:** R$ 5.000,00+\n"
-                "• **Trader Ametista:** R$ 10.000,00+\n"
-                "• **Trader Esmeralda:** R$ 25.000,00+\n"
-                "• **Trader Rubi:** R$ 50.000,00+\n"
-                "• **Trader Sáfira:** R$ 100.000,00+ *(Ganha Placa Física)*\n"
-                "• **Trader Master:** R$ 200.000,00+\n"
-                "• **Trader Obsidian:** R$ 400.000,00+\n\n"
-                "📦 **Placa Física de Conquista:**\n"
-                "Ao atingir o posto de **Trader Sáfira (R$ 100k+)**, você tem o direito de receber em sua residência "
-                "uma placa física personalizada exclusiva do servidor com seu nome gravado!"
-            ),
-            color=COR_ROXA
-        )
-        await canal_ranks.send(embed=embed_ranks, view=ResgatarPlacaView(ctx.guild))
-
-    await ctx.send(f"✅ **Painéis processados!** Enviados em: FAQ (<#{canal_faq.id}>) e Ranks (<#{canal_ranks.id}>).", delete_after=10)
+    await ctx.send("🔄 Forçando atualização dos painéis...", delete_after=3)
+    await executar_envio_automatico_paineis()
 
 @bot.command(name="hit")
 async def gerar_painel_suporte_scam(ctx):
@@ -932,9 +935,13 @@ async def registrar_big_vouches(ctx, quantidade: int = None):
 async def on_ready():
     global bot_inicializado
     if not bot_inicializado:
+        # Registra a view persistente das placas físicas
         bot.add_view(ResgatarPlacaView(None))
         bot_inicializado = True
     print(f"✅ Sistema operacional ativo com sucesso: {bot.user.name} online!")
+    
+    # Executa o envio automático dos painéis assim que liga
+    asyncio.create_task(executar_envio_automatico_paineis())
 
 if __name__ == "__main__":
     bot.run(TOKEN)
