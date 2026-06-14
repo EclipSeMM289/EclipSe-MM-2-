@@ -435,7 +435,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def fluxo_definir_valor(self, channel):
+    async def flujo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -810,7 +810,7 @@ async def loop_vouches_automaticos():
         valor_aleatorio = round(random.uniform(5.0, 1000.0), 2)
         
     if canal:
-        await gerador_de_vouch_base(canal, tipo_envio, valor_aleatorio, eh_big_vouch)
+        await gerador_de_vouch_base(canal, tipo_envio, valor_aleatorio, eh_big)
 
 @bot.event
 async def on_ready():
@@ -829,7 +829,9 @@ async def on_ready():
         print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
-        url_gif_divisor = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
+        
+        # 🔗 NOVO LINK DO GIF DIVISOR ATUALIZADO:
+        url_gif_divisor = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
         espacamento_invisivel = "‎" + " " * 75  
 
         canal_alvo = bot.get_channel(ID_CANAL_TICKET)
@@ -882,7 +884,7 @@ async def on_ready():
                 embed_faq_unico.add_field(
                     name="❓ — E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?",
                     value=(
-                        "Nosso middleman automático foi pensado para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmation do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
+                        "Nosso middleman automático foi pensato para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmation do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
                         "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado.\n\u200b"
                     ),
                     inline=False
