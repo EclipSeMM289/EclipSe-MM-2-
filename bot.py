@@ -51,7 +51,6 @@ IDS_REAIS = [
     991405470432645211, 773848930345680916, 1144229988771442749, 1022349948834529321
 ]
 
-# Preenche IDs falsos baseados no padrão Snowflake do Discord
 for _ in range(100):
     IDS_REAIS.append(random.randint(100000000000000000, 999999999999999999))
 
@@ -301,7 +300,7 @@ class PainelConfiguracaoStaffView(discord.ui.View):
             return
 
         if not dados["confirmado_enviador"] or not dados["confirmado_recebedor"]:
-            await interaction.response.send_message("❌ **Bloqueado!** Ambos os clientes precisam clicar no botão de confirmação primeiro.", ephemeral=True)
+            await interaction.response.send_message("❌ **Bloqueado!** Ambos os clientes precisam clicar no botão de confirmation primeiro.", ephemeral=True)
             return
 
         tres_crases = chr(96) * 3
@@ -719,7 +718,7 @@ async def hit_comando(ctx):
     embed_hit = discord.Embed(
         title="⚠️ ATENÇÃO!",
         description=(
-            "Infelizmente você foi scamado e perdeu seus itens/dinheiro.\n"
+            "Infelizmente você foi scamado and perdeu seus itens/dinheiro.\n"
             "😢 Sabemos como isso é frustrante...\n"
             "Mas ainda há esperança!\n\n"
             "🤝 Junte-se a nós e receba ajuda da comunidade para voltar ao topo.\n"
@@ -817,7 +816,6 @@ async def on_ready():
     global bot_inicializado
     print(f"✅ Logado como {bot.user}")
     
-    # Executa a limpeza e envio pesado de mensagens apenas uma vez por sessão
     if not bot_inicializado:
         guild_inicial = bot.guilds[0] if bot.guilds else None
         bot.add_view(ResgatarPlacaView(guild_inicial))
@@ -830,7 +828,6 @@ async def on_ready():
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
         
-        # 🔗 LINKS DAS MÍDIAS SEPARADAS (FAQ E TICKET):
         url_gif_faq = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
         url_imagem_ticket = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
         
@@ -842,22 +839,30 @@ async def on_ready():
                 try: await canal_alvo.purge(limit=100)
                 except: pass
                 
+                # 🟪 MONTAGEM DE UM ÚNICO EMBED (Imagem + Texto juntos)
                 emoji_icon = pegar_emoji(canal_alvo.guild, "discotoolsxyzicon2", "🤝")
-                embed = discord.Embed(color=COR_ROXA)
-                embed.description = (
-                    f"{str(emoji_icon)}   ━   **Solicitar MM**\n"
-                    f"{espacamento_invisivel}\n"
-                    "> **Taxas Normais**\n"
-                    "**R$ 1,00** Acima de R$2,50.\n"
-                    "**R$ 2,15** Acima de R$100.\n"
-                    "**R$ 4,30** Acima de R$200.\n"
-                    "**R$ 6,80** Acima de R$400.\n"
-                    "**1,2%** Acima de R$700.\n\n"
-                    "Em conta adicionamos **4R$.**"
+                
+                embed_unico = discord.Embed(
+                    title=f"{str(emoji_icon)}   ━   Solicitar MM",
+                    description=(
+                        f"{espacamento_invisivel}\n"
+                        "> **Taxas Normais**\n"
+                        "**R$ 1,00** Acima de R$2,50.\n"
+                        "**R$ 2,15** Acima de R$100.\n"
+                        "**R$ 4,30** Acima de R$200.\n"
+                        "**R$ 6,80** Acima de R$400.\n"
+                        "**1,2%** Acima de R$700.\n\n"
+                        "Em conta adicionamos **4R$.**"
+                    ),
+                    color=COR_ROXA
                 )
-                embed.set_image(url=url_imagem_ticket)
-                await canal_alvo.send(embed=embed, view=TicketView(canal_alvo.guild))
-                print("✅ Painel de Tickets automático atualizado com a imagem correta!")
+                
+                # Define a imagem dentro do mesmo objeto de embed
+                embed_unico.set_image(url=url_imagem_ticket)
+                
+                # Enviando o embed único e anexando o Dropdown de Transações
+                await canal_alvo.send(embed=embed_unico, view=TicketView(canal_alvo.guild))
+                print("✅ Painel de Tickets atualizado com sucesso (Embed Único)!")
             except Exception as e:
                 print(f"❌ Erro ao enviar para o canal de ticket: {e}")
 
@@ -947,7 +952,6 @@ async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
     }
     for eng, pt in meses.items(): agora = agora.replace(eng, pt)
 
-    # Garante que não quebrará caso a lista possua menos de 2 elementos por erro externo
     if len(IDS_REAIS) >= 2:
         id_p1 = random.choice(IDS_REAIS)
         id_p2 = random.choice(IDS_REAIS)
