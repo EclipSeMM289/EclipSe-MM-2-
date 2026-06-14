@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import asyncio
 import sqlite3
 import os
+import io
+import aiohttp
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -611,7 +613,7 @@ class TicketDropdown(discord.ui.Select):
             "scams e erros.\n\n"
             "**Passos:**\n"
             "1. Adicione o usuário com quem vai negociar usando o botão abaixo.\n"
-            "2. O bot abrirá a seleção de quem envia e recebe o PIX.\n"
+            "2. O bot abrirá a selection de quem envia e recebe o PIX.\n"
             "3. O bot pedirá para descreverem o valor e os itens no chat.\n"
             "4. Após confirmação, o pix seguro é gerado."
         )
@@ -827,7 +829,7 @@ async def on_ready():
         print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
-        url_gif_faq = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png" # Usado link estável alternativo para o exemplo
+        url_gif_faq = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
         url_imagem_ticket = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
         
         canal_alvo = bot.get_channel(ID_CANAL_TICKET)
@@ -836,11 +838,8 @@ async def on_ready():
                 try: await canal_alvo.purge(limit=100)
                 except: pass
                 
-                # 🛠️ CONSTRUÇÃO DO PAINEL MODERNO (SEM EMBED):
-                # O link da imagem vem no topo, seguido das quebras de linha e do texto puro formatado.
-                # O Discord processa o link e joga a renderização da imagem para cima do texto automaticamente.
+                # Texto limpo sem o link exposto para não poluir
                 conteudo_painel_v2 = (
-                    f"{url_imagem_ticket}\n\n"
                     "### 💜 ━ Solicitar MM\n"
                     "> **Taxas Normais**\n"
                     "**R$ 1,00** Acima de R$2,50.\n"
@@ -851,9 +850,21 @@ async def on_ready():
                     "Em conta adicionamos **4R$.**"
                 )
                 
-                # Enviando direto como string de conteúdo acoplado com a View do Dropdown
-                await canal_alvo.send(content=conteudo_painel_v2, view=TicketView(canal_alvo.guild))
-                print("✅ Painel de Tickets V2 (Imagem no topo + texto copiável) postado com sucesso!")
+                # Baixa a imagem em memória e envia como anexo nativo para forçar renderização no topo
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url_imagem_ticket) as resp:
+                        if resp.status == 200:
+                            data = io.BytesIO(await resp.read())
+                            arquivo_banner = discord.File(data, filename="banner.png")
+                            
+                            # Enviando o arquivo (topo), o texto (meio) e a View com o Dropdown (baixo)
+                            await canal_alvo.send(content=conteudo_painel_v2, file=arquivo_banner, view=TicketView(canal_alvo.guild))
+                            print("✅ Painel de Tickets V2 (Imagem no topo nativa + texto copiável) postado com sucesso!")
+                        else:
+                            # Fallback caso a URL do banner apresente erro
+                            await canal_alvo.send(content=conteudo_painel_v2, view=TicketView(canal_alvo.guild))
+                            print("⚠️ Banner indisponível, painel de tickets enviado apenas com texto.")
+                            
             except Exception as e:
                 print(f"❌ Erro ao enviar para o canal de ticket: {e}")
 
