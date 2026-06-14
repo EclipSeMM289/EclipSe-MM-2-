@@ -161,11 +161,11 @@ class PainelTicketV2(discord.ui.LayoutView):
             accent_color=discord.Color(COR_ROXA)
         )
 
-        container.add_item(
-           discord.MediaGalleryItem
-                discord.ui.MediaGalleryItem(URL_IMAGEM_TICKET)
-            )
-        
+      container.add_item(
+    discord.ui.MediaGallery(
+        discord.MediaGalleryItem(URL_IMAGEM_TICKET)
+    )
+)
 
         container.add_item(
             discord.ui.TextDisplay(
