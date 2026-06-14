@@ -858,10 +858,8 @@ async def on_ready():
                     color=COR_ROXA
                 )
                 
-        # Envia a imagem primeiro, em cima
-await canal_alvo.send(url_imagem_ticket)
+        await canal_alvo.send(url_imagem_ticket)
 
-# Depois envia o painel com o dropdown
 await canal_alvo.send(
     embed=embed_unico,
     view=TicketView(canal_alvo.guild)
