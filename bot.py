@@ -7,31 +7,23 @@ import sqlite3
 import os
 from dotenv import load_dotenv
 
-# ==========================================
-# 🔐 CARREGAMENTO E VALIDAÇÃO DO TOKEN
-# ==========================================
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 
-if TOKEN is None:
-    raise ValueError(
-        "❌ ERRO: O token do Discord não foi encontrado!\n"
-        "Verifique se o seu arquivo '.env' está na mesma pasta do bot "
-        "ou se a variável 'DISCORD_TOKEN' foi passada nas configurações do seu container/Docker."
-    )
 
-# ==========================================
-# 📥 CONFIGURAÇÃO DE CANAIS E CARGOS
-# ==========================================
+# 📥 CONFIGURAÇÃO DE CANAIS (IDs Atualizadas):
 ID_CANAL_TICKET = 1512267548043776072
 ID_CANAL_FAQ = 1512267542461157536
 ID_CANAL_RANKS = 1512267543643951124  
 ID_CANAL_VOUCH = 1512267549901983867     
 ID_CANAL_BIGVOUCH = 1512267551927963748  
 
+# 👑 CARGOS AUTORIZADOS / ESPECÍFICOS:
 ID_CARGO_STAFF = 1512269380094787757
 ID_CARGO_RECUPERACAO = 1513703148936499381  
+
+# 👤 MIDDLEMAN FIXO PARA OS VOUCHES:
 ID_MM_FIXO = 1510480019640553482
 
 intents = discord.Intents.default()
@@ -43,7 +35,7 @@ bot = commands.Bot(command_prefix=["!", "?", "+"], intents=intents, help_command
 
 COR_ROXA = 0xA020F0
 parar_envio = False
-bot_inicializado = False  
+bot_inicializado = False  # Flag para evitar re-execução no on_ready
 DADOS_TICKETS = {}
 
 LISTA_NOMES_CARGOS = [
@@ -59,12 +51,10 @@ IDS_REAIS = [
     991405470432645211, 773848930345680916, 1144229988771442749, 1022349948834529321
 ]
 
+# Preenche IDs falsos baseados no padrão Snowflake do Discord
 for _ in range(100):
     IDS_REAIS.append(random.randint(100000000000000000, 999999999999999999))
 
-# ==========================================
-# 🗄️ SISTEMA DE BANCO DE DADOS (SQLITE)
-# ==========================================
 def inicializar_banco():
     conn = sqlite3.connect("database_ranks.db")
     cursor = conn.cursor()
@@ -99,9 +89,6 @@ def adicionar_saldo(user_id: int, valor: float) -> float:
     conn.close()
     return novo_saldo
 
-# ==========================================
-# 🛠️ FUNÇÕES UTILITÁRIAS
-# ==========================================
 def pegar_emoji(guild, nome, fallback):
     if guild:
         e = discord.utils.get(guild.emojis, name=nome)
@@ -168,9 +155,6 @@ async def verificar_e_atualizar_rank(membro: discord.Member, canal_notificacao):
         except Exception as e:
             print(f"Erro ao atualizar cargo de {membro.name}: {e}")
 
-# ==========================================
-# 💎 INTERFACES GRÁFICAS DE TICKETS (VIEWS / MODALS)
-# ==========================================
 class ResgatarPlacaView(discord.ui.View):
     def __init__(self, guild):
         super().__init__(timeout=None)
@@ -451,7 +435,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def flujo_definir_valor(self, channel):
+    async def fluxo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -582,7 +566,7 @@ class PainelInternoTicketView(discord.ui.View):
         await interaction.response.send_modal(AdicionarIDModal())
 
     async def cancelar_ticket_callback(self, interaction: discord.Interaction):
-        await interaction.response.send_message("🛑 **Este ticket será fechado e deletado em 5 seconds...**")
+        await interaction.response.send_message("🛑 **Este ticket será fechado e deletado em 5 segundos...**")
         await asyncio.sleep(5)
         DADOS_TICKETS.pop(interaction.channel.id, None)
         await interaction.channel.delete()
@@ -642,9 +626,6 @@ class TicketView(discord.ui.View):
         super().__init__(timeout=None)
         self.add_item(TicketDropdown(guild))
 
-# ==========================================
-# 👤 COMANDOS PÚBLICOS / GERAIS
-# ==========================================
 @bot.command(name="comandos")
 async def comandos_servidor(ctx):
     embed_ajuda = discord.Embed(
@@ -666,7 +647,7 @@ async def comandos_servidor(ctx):
     embed_ajuda.add_field(
         name="👑 Comandos da Staff",
         value=(
-            "`?enviarpainel` - Atualiza e envia manualmente os painéis de FAQ e Ranks.\n"
+            "`?enviarpainel` - Atualiza e envia o painel de ranks com o botão de placas.\n"
             "`?hit` - Gera o painel de suporte contra scam/recuperação.\n"
             "`+desmute @membro` - Remove o castigo/timeout de um usuário.\n"
             "`?funcoes` - Força a inicialização imediata do painel de seleção no chat.\n"
@@ -695,253 +676,320 @@ async def ver_perfil_rank(ctx, membro: discord.Member = None):
         color=COR_ROXA
     )
     embed.set_thumbnail(url=membro.display_avatar.url)
-    embed.set_footer(text=f"Consultado por {ctx.author.name}", icon_url=ctx.author.display_avatar.url)
-    
     await ctx.send(embed=embed)
 
-# ==========================================
-# 👑 ENVIADOR AUTOMÁTICO REESTRUTURADO (FAZ O ENVIO SEM PRECISAR DE COMANDO)
-# ==========================================
-async def executar_envio_automatico_paineis():
-    print("⏳ Aguardando sincronização com os servidores do Discord...")
-    await asyncio.sleep(5)  # Delay estratégico para evitar falta de cache na inicialização
-    
-    # --- 🛠️ 1. ENVIO DO PAINEL DE TICKETS / FAQ ---
-    try:
-        canal_faq = await bot.fetch_channel(ID_CANAL_FAQ)
-        if canal_faq:
-            try: await canal_faq.purge(limit=50)
-            except: pass
-            
-            emoji_ticket = pegar_emoji(canal_faq.guild, "discotoolsxyzicon2", "🤝")
-            embed_faq = discord.Embed(
-                title=f"{str(emoji_ticket)}   ━   SISTEMA DE INTERMEDIAÇÃO",
-                description=(
-                    "Para iniciar uma nova troca/venda via PIX de forma 100% segura usando nossa estrutura "
-                    "automatizada, abra o menu abaixo e selecione a opção desejada.\n\n"
-                    "**⚠️ Termos e Avisos Importantes:**\n"
-                    "• Certifique-se de que o outro participante está no servidor antes de chamá-lo.\n"
-                    "• Nunca realize transações diretas sem a confirmação de saldo retido do Middleman.\n"
-                    "• Guarde prints e grave toda a negociação/entrega dos itens para sua segurança."
-                ),
-                color=COR_ROXA
-            )
-            await canal_faq.send(embed=embed_faq, view=TicketView(canal_faq.guild))
-            print("✅ Painel de Tickets/FAQ enviado automaticamente com sucesso!")
-    except Exception as e:
-        print(f"❌ Falha ao enviar painel de FAQ automático: {e}")
+class HitPainelView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    # --- 🏆 2. ENVIO DO PAINEL DE RANKS / CARGOS ---
-    try:
-        canal_ranks = await bot.fetch_channel(ID_CANAL_RANKS)
-        if canal_ranks:
-            try: await canal_ranks.purge(limit=50)
-            except: pass
-            
-            emoji_rank = pegar_emoji(canal_ranks.guild, "discotoolsxyzicon2", "🏆")
-            embed_ranks = discord.Embed(
-                title=f"{str(emoji_rank)}   ━   SISTEMA DE RECOMPENSAS HISTÓRICAS",
-                description=(
-                    "Ao acumular movimentações dentro do nosso system de Middleman, você sobe automaticamente "
-                    "de Rank no servidor e desbloqueia novos cargos de prestígio!\n\n"
-                    "📜 **Lista de Cargos por Volume:**\n"
-                    "• **Trader Bronze:** R$ 0,01+\n"
-                    "• **Trader Prata:** R$ 500,00+\n"
-                    "• **Trader Ouro:** R$ 1.000,00+\n"
-                    "• **Trader Diamante:** R$ 5.000,00+\n"
-                    "• **Trader Ametista:** R$ 10.000,00+\n"
-                    "• **Trader Esmeralda:** R$ 25.000,00+\n"
-                    "• **Trader Rubi:** R$ 50.000,00+\n"
-                    "• **Trader Sáfira:** R$ 100.000,00+ *(Ganha Placa Física)*\n"
-                    "• **Trader Master:** R$ 200.000,00+\n"
-                    "• **Trader Obsidian:** R$ 400.000,00+\n\n"
-                    "📦 **Placa Física de Conquista:**\n"
-                    "Ao atingir o posto de **Trader Sáfira (R$ 100k+)**, você tem o direito de receber em sua residência "
-                    "uma placa física personalizada exclusiva do servidor com seu nome gravado!"
-                ),
-                color=COR_ROXA
-            )
-            await canal_ranks.send(embed=embed_ranks, view=ResgatarPlacaView(canal_ranks.guild))
-            print("✅ Painel de Ranks enviado automaticamente com sucesso!")
-    except Exception as e:
-        print(f"❌ Falha ao enviar painel de Ranks automático: {e}")
+    @discord.ui.button(label="Aceitar", style=discord.ButtonStyle.secondary, row=0)
+    async def aceitar_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        cargo = interaction.guild.get_role(ID_CARGO_RECUPERACAO)
+        if cargo:
+            try:
+                await interaction.user.add_roles(cargo)
+                await interaction.response.send_message("🟪 Você aceitou! O cargo de recuperação foi adicionado ao seu perfil.", ephemeral=True)
+            except Exception as e:
+                await interaction.response.send_message(f"❌ Erro ao adicionar o cargo: {e}", ephemeral=True)
+        else:
+            await interaction.response.send_message("❌ O cargo de recuperação configurado não foi encontrado.", ephemeral=True)
 
-@bot.command(name="enviarpainel")
-@commands.has_permissions(administrator=True)
-async def enviar_painel_principal(ctx):
-    """Permite forçar o reenvio manualmente se precisar"""
-    try: await ctx.message.delete()
-    except: pass
-    await ctx.send("🔄 Forçando atualização dos painéis...", delete_after=3)
-    await executar_envio_automatico_paineis()
+    @discord.ui.button(label="Recusar", style=discord.ButtonStyle.secondary, row=0)
+    async def recusar_callback(self, interaction: discord.Interaction, button: discord.ui.Button):
+        try:
+            tempo_timeout = discord.utils.utcnow() + timedelta(days=10)
+            await interaction.user.edit(timed_out_until=tempo_timeout, reason="Recusou o painel de suporte contra scam (?hit).")
+            await interaction.response.send_message("🔇 Você recusou a ajuda e foi mutado por 10 dias.", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.response.send_message("❌ Eu não tenho permissão de administrador superior para mutar você.", ephemeral=True)
+        except Exception as e:
+            await interaction.response.send_message(f"❌ Erro ao aplicar o castigo: {e}", ephemeral=True)
 
 @bot.command(name="hit")
-async def gerar_painel_suporte_scam(ctx):
+async def hit_comando(ctx):
     if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
-        await ctx.send("❌ Comando exclusivo da Staff.", delete_after=5)
+        await ctx.send("❌ Você não tem permissão para usar este comando.", delete_after=5)
+        try: await ctx.message.delete()
+        except: pass
         return
-        
-    try: await ctx.message.delete()
+
+    try: await ctx.channel.purge(limit=100)
     except: pass
 
-    embed_scam = discord.Embed(
-        title="🚨 Central de Denúncias e Recuperações",
+    embed_hit = discord.Embed(
+        title="⚠️ ATENÇÃO!",
         description=(
-            "Fui roubado (Scam) ou preciso recuperar uma conta? Leia com atenção:\n\n"
-            "1. Junte todas as provas em vídeo e prints legíveis da conversa e da ID do infrator.\n"
-            "2. Abra um ticket padrão de denúncia na aba de suporte geral do servidor.\n"
-            "3. Aguarde um dos Diretores ou Analistas de Segurança avaliar o seu caso.\n\n"
-            "⚠️ *Prestar falsas alegações ou tentar forjar comprovantes resultará em banimento permanente imediato.*"
+            "Infelizmente você foi scamado e perdeu seus itens/dinheiro.\n"
+            "😢 Sabemos como isso é frustrante...\n"
+            "Mas ainda há esperança!\n\n"
+            "🤝 Junte-se a nós e receba ajuda da comunidade para voltar ao topo.\n"
+            "Entre agora e comece sua recuperação! 💸🔥"
         ),
-        color=0xFF0000
+        color=COR_ROXA
     )
-    await ctx.send(embed=embed_scam)
-
-@bot.command(name="fechar")
-async def fechar_ticket_comando(ctx):
-    if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
-        await ctx.send("❌ Apenas a Staff pode fechar canais de atendimento.", delete_after=5)
-        return
-    await ctx.send("🛑 **Canal em encerramento... Removendo dados temporários e deletando em 5 segundos.**")
-    await asyncio.sleep(5)
-    DADOS_TICKETS.pop(ctx.channel.id, None)
-    await ctx.channel.delete()
-
-@bot.command(name="funcoes")
-async def forcar_inicializacao_funcoes(ctx):
-    if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
-        return
-    try: await ctx.message.delete()
-    except: pass
-    view_funcoes = SelecaoFuncoesView(ctx.guild)
-    await ctx.send(embed=view_funcoes.gerar_embed(), view=view_funcoes)
+    await ctx.send(embed=embed_hit, view=HitPainelView())
 
 @bot.command(name="desmute")
-async def remover_timeout_membro(ctx, membro: discord.Member = None):
+async def desmute_comando(ctx, membro: discord.Member = None):
     if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
-        await ctx.send("❌ Permissão insuficiente.", delete_after=5)
+        await ctx.send("❌ Apenas membros da Staff podem retirar o castigo de usuários.", delete_after=5)
         return
     if not membro:
-        await ctx.send("❌ Uso correto: `+desmute @membro`", delete_after=5)
+        await ctx.send("❌ Você precisa mencionar o usuário que deseja desmutar! Exemplo: `+desmute @nome`")
         return
     try:
-        await membro.timeout(None, reason=f"Timeout removido por {ctx.author.name}")
-        await ctx.send(f"✅ O castigo de {membro.mention} foi encerrado com sucesso!")
+        await membro.edit(timed_out_until=None, reason=f"Castigo removido manualmente por {ctx.author.name}")
+        await ctx.send(f"🟪 O castigo de {membro.mention} foi retirado com sucesso!")
+    except discord.Forbidden:
+        await ctx.send("❌ Eu não possuo permissões administrativas suficientes para desmutar este membro.")
     except Exception as e:
-        await ctx.send(f"❌ Não foi possível retirar o castigo: {e}")
+        await ctx.send(f"❌ Ocorreu um erro ao tentar desmutar: {e}")
 
-# ==========================================
-# 📊 SISTEMA DE ENVIO MASSIVO DE VOUCHES (GERADOR AUTOMÁTICO)
-# ==========================================
-@bot.command(name="stop")
-async def parar_envio_vouches(ctx):
-    global parar_envio
+async def postar_estrutura_painel_ranks(guild, canal):
+    roles = {nome: discord.utils.get(guild.roles, name=nome) for nome in LISTA_NOMES_CARGOS}
+    
+    if not all(roles.values()):
+        print("❌ Alerta: Faltam cargos de rank no servidor para gerar o painel!")
+        return False
+
+    url_gif_cargos = "https://media.discordapp.net/attachments/1371123164729442475/1482116537119936755/339de7b78f614c4195ebd8433f51dc71.png"
+    
+    await canal.send(content=url_gif_cargos)
+
+    embed_rank = discord.Embed(color=COR_ROXA)
+    embed_rank.description = (
+        "⭐   ━   **Cargos e placas.**\n\n"
+        f"**<@&{roles['Trader Bronze'].id}>**\n> Faça uma trade no servidor.\n\n"
+        f"**<@&{roles['Trader Prata'].id}>**\n> Alcance 500R$ no servidor!\n\n"
+        f"**<@&{roles['Trader Ouro'].id}>**\n> Alcance 1000R$ no servidor!\n\n"
+        f"**<@&{roles['Trader Diamante'].id}>**\n> Alcance 5000R$ no servidor!\n\n"
+        f"**<@&{roles['Trader Ametista'].id}>**\n> Alcance 10000R$ no servidor!\n\n"
+        f"**<@&{roles['Trader Esmeralda'].id}>**\n> Alcance 25000R$ no servidor!\n\n"
+        f"**<@&{roles['Trader Rubi'].id}>**\n> Alcance 50000R$ no servidor!\n\n"
+        f"**<@&{roles['Trader Sáfira'].id}>**\n> Alcance 100000R$ no servidor!\n> **Você ganha uma placa física de recompensa.**\n\n"
+        f"**<@&{roles['Trader Master'].id}>**\n> Alcance 200000R$ no servidor!\n> **Você ganha uma placa física de recompensa.**\n\n"
+        f"**<@&{roles['Trader Obsidian'].id}>**\n> Alcance 400000R$ no servidor!\n> **Você ganha uma placa física de recompensa.**\n\n"
+        "─── 👤 **Cargos Extras** ───\n\n"
+        f"**<@&{roles['Biggest Trader'].id}>**\nTenha a maior troca atual da EclipSe MM.\n\n"
+        f"**<@&{roles['OldBigger'].id}>**\nTenha feito pelo menos uma vez a maior troca da EclipSe MM.\n\n"
+        f"**<@&{roles['🏆 ・ Top Trader'].id}>**\nTermine o mês como TOP 1 MENSAL.\n"
+    )
+    await canal.send(embed=embed_rank, view=ResgatarPlacaView(guild))
+    return True
+
+@bot.command(name="enviarpainel")
+async def enviar_painel_especifico(ctx):
     if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
-        return
-    parar_envio = True
-    await ctx.send("🛑 **Comando de parada recebido!** Interrompendo todos os envios de vouches em segundo plano.", delete_after=10)
-
-@bot.command(name="registrarv")
-async def registrar_vouches_comuns(ctx, quantidade: int = None):
-    global parar_envio
-    if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
-        return
-    if not quantidade or quantidade <= 0:
-        await ctx.send("❌ Informe uma quantidade válida! Exemplo: `?registrarv 15`", delete_after=5)
+        await ctx.send("❌ Apenas membros da Staff podem executar este comando.", delete_after=5)
         return
 
-    canal_vouch = bot.get_channel(ID_CANAL_VOUCH)
-    if not canal_vouch:
-        await ctx.send("❌ Canal de vouches comuns não configurado corretamente.", delete_after=5)
+    canal_ranks = bot.get_channel(ID_CANAL_RANKS)
+    if not canal_ranks:
+        await ctx.send(f"❌ Não consegui localizar o canal de Ranks com o ID `{ID_CANAL_RANKS}`.")
         return
 
-    parar_envio = False
-    await ctx.send(f"🚀 Iniciando envio em lote de `{quantidade}` Vouches Comuns no canal {canal_vouch.mention}...")
+    try: await canal_ranks.purge(limit=30)
+    except: pass
 
-    for i in range(quantidade):
-        if parar_envio:
-            await ctx.send("🛑 Processo de vouches comuns cancelado pelo Staff.")
-            break
+    sucesso = await postar_estrutura_painel_ranks(ctx.guild, canal_ranks)
+    if sucesso:
+        await ctx.send(f"✅ Painel de Ranks atualizado enviado no canal correto {canal_ranks.mention}!")
+    else:
+        await ctx.send("❌ Falha ao enviar o painel. Verifique se todos os cargos existem.")
 
-        valor_aleatorio = round(random.uniform(5.00, 95.00), 2)
-        id_cliente_aleatorio = random.choice(IDS_REAIS)
+@tasks.loop(minutes=1)
+async def loop_vouches_automaticos():
+    eh_big_vouch = random.choice([True, False])
+    tipo_envio = random.choice(["Automático", "Manual"])
+    
+    if eh_big_vouch:
+        canal = bot.get_channel(ID_CANAL_BIGVOUCH)
+        valor_aleatorio = round(random.uniform(1000.0, 10000.0), 2)
+    else:
+        canal = bot.get_channel(ID_CANAL_VOUCH)
+        valor_aleatorio = round(random.uniform(5.0, 1000.0), 2)
         
-        embed_vouch = discord.Embed(
-            title="📥 VOUCH DE INTERMEDIAÇÃO CONCLUÍDA",
-            color=COR_ROXA,
-            timestamp=datetime.utcnow() - timedelta(minutes=random.randint(1, 120))
-        )
-        embed_vouch.add_field(name="👤 Comprador / Client:", value=f"<@{id_cliente_aleatorio}>", inline=True)
-        embed_vouch.add_field(name="👑 Middleman Responsável:", value=f"<@{ID_MM_FIXO}>", inline=True)
-        embed_vouch.add_field(name="💰 Valor da Transação:", value=f"`{formatar_valor(valor_aleatorio)}`", inline=False)
-        embed_vouch.add_field(name="📊 Status no Banco:", value="✅ Sincronizado e Computado com Sucesso", inline=False)
-        embed_vouch.set_footer(text="Logs de Transações Oficiais • Verificado via API")
+    if canal:
+        await gerador_de_vouch_base(canal, tipo_envio, valor_aleatorio, eh_big_vouch)
 
-        await canal_vouch.send(embed=embed_vouch)
-        await asyncio.sleep(random.uniform(1.2, 3.5))
-
-    if not parar_envio:
-        await ctx.send(f"✅ Finalizado! `{quantidade}` vouches comuns foram injetados com sucesso.")
-
-@bot.command(name="registrarbv")
-async def registrar_big_vouches(ctx, quantidade: int = None):
-    global parar_envio
-    if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
-        return
-    if not quantidade or quantidade <= 0:
-        await ctx.send("❌ Informe uma quantidade válida! Exemplo: `?registrarbv 5`", delete_after=5)
-        return
-
-    canal_big = bot.get_channel(ID_CANAL_BIGVOUCH)
-    if not canal_big:
-        await ctx.send("❌ Canal de Big Vouches não configurado corretamente.", delete_after=5)
-        return
-
-    parar_envio = False
-    await ctx.send(f"🔥 Iniciando envio em lote de `{quantidade}` **BIG VOUCHES** (Valores Altos) no canal {canal_big.mention}...")
-
-    for i in range(quantidade):
-        if parar_envio:
-            await ctx.send("🛑 Processo de Big Vouches cancelado pelo Staff.")
-            break
-
-        valor_alto = round(random.uniform(150.00, 3500.00), 2)
-        id_cliente_aleatorio = random.choice(IDS_REAIS)
-        
-        embed_bv = discord.Embed(
-            title="💎 VALOR ALTO — BIG VOUCH VERIFICADO",
-            color=0x00FFFF,
-            timestamp=datetime.utcnow() - timedelta(hours=random.randint(1, 24))
-        )
-        embed_bv.add_field(name="👤 Investidor / Comprador:", value=f"<@{id_cliente_aleatorio}>", inline=True)
-        embed_bv.add_field(name="👑 Middleman de Elite:", value=f"<@{ID_MM_FIXO}>", inline=True)
-        embed_bv.add_field(name="💰 Montante Movimentado:", value=f"**{formatar_valor(valor_alto)}**", inline=False)
-        embed_bv.add_field(name="🚀 Impacto de Rank:", value="📈 Aplicando multiplicadores históricos na database...", inline=False)
-        
-        emoji_fogo = pegar_emoji(ctx.guild, "discotoolsxyzicon2", "🔥")
-        embed_bv.set_author(name="Transação Monitorada de Grande Volume", icon_url=ctx.guild.icon.url if ctx.guild.icon else None)
-        embed_bv.set_footer(text=f"Segurança Máxima Garantida {str(emoji_fogo)}")
-
-        await canal_big.send(embed=embed_bv)
-        await asyncio.sleep(random.uniform(2.0, 5.0))
-
-    if not parar_envio:
-        await ctx.send(f"✨ Concluído! `{quantidade}` Big Vouches de alta relevância foram processados.")
-
-# ==========================================
-# 🔄 CICLO DE EVENTOS GERAIS DO BOT
-# ==========================================
 @bot.event
 async def on_ready():
     global bot_inicializado
-    if not bot_inicializado:
-        # Registra a view persistente das placas físicas
-        bot.add_view(ResgatarPlacaView(None))
-        bot_inicializado = True
-    print(f"✅ Sistema operacional ativo com sucesso: {bot.user.name} online!")
+    print(f"✅ Logado como {bot.user}")
     
-    # Executa o envio automático dos painéis assim que liga
-    asyncio.create_task(executar_envio_automatico_paineis())
+    # Executa a limpeza e envio pesado de mensagens apenas uma vez por sessão
+    if not bot_inicializado:
+        guild_inicial = bot.guilds[0] if bot.guilds else None
+        bot.add_view(ResgatarPlacaView(guild_inicial))
+        
+        if loop_vouches_automaticos.is_running():
+            loop_vouches_automaticos.stop()
+            
+        loop_vouches_automaticos.start()
+        print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
+        
+        url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
+        url_gif_divisor = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
+        espacamento_invisivel = "‎" + " " * 75  
 
-if __name__ == "__main__":
-    bot.run(TOKEN)
+        canal_alvo = bot.get_channel(ID_CANAL_TICKET)
+        if canal_alvo:
+            try:
+                try: await canal_alvo.purge(limit=100)
+                except: pass
+                
+                emoji_icon = pegar_emoji(canal_alvo.guild, "discotoolsxyzicon2", "🤝")
+                embed = discord.Embed(color=COR_ROXA)
+                embed.description = (
+                    f"{str(emoji_icon)}   ━   **Solicitar MM**\n"
+                    f"{espacamento_invisivel}\n"
+                    "> **Taxas Normais**\n"
+                    "**R$ 1,00** Acima de R$2,50.\n"
+                    "**R$ 2,15** Acima de R$100.\n"
+                    "**R$ 4,30** Acima de R$200.\n"
+                    "**R$ 6,80** Acima de R$400.\n"
+                    "**1,2%** Acima de R$700.\n\n"
+                    "Em conta adicionamos **4R$.**"
+                )
+                embed.set_image(url=url_gif_divisor)
+                await canal_alvo.send(embed=embed, view=TicketView(canal_alvo.guild))
+                print("✅ Painel de Tickets automático updated!")
+            except Exception as e:
+                print(f"❌ Erro ao enviar para o canal de ticket: {e}")
+
+        canal_ranks = bot.get_channel(ID_CANAL_RANKS)
+        if canal_ranks and guild_inicial:
+            try:
+                try: await canal_ranks.purge(limit=50)
+                except: pass
+                await postar_estrutura_painel_ranks(guild_inicial, canal_ranks)
+                print("✅ Painel de Ranks updated!")
+            except Exception as e:
+                print(f"❌ Erro ao atualizar automaticamente o canal de ranks: {e}")
+
+        canal_faq = bot.get_channel(ID_CANAL_FAQ)
+        if canal_faq:
+            try:
+                try: await canal_faq.purge(limit=100)
+                except: pass
+                
+                embed_faq_unico = discord.Embed(color=COR_ROXA)
+                embed_faq_unico.set_thumbnail(url=url_foto_aperto_mao)
+                
+                embed_faq_unico.title = "❓ — FAQ."
+                embed_faq_unico.description = "Todas as dúvidas frequentes do nosso novo middleman automático de forma organizada aqui! Caso tenha outras dúvidas, contacte um staff.\n\u200b"
+
+                embed_faq_unico.add_field(
+                    name="❓ — E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?",
+                    value=(
+                        "Nosso middleman automático foi pensado para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmation do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
+                        "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado.\n\u200b"
+                    ),
+                    inline=False
+                )
+
+                embed_faq_unico.add_field(
+                    name="❓ — O pagamento é seguro? O dinheiro pode ser retido ou perdido?",
+                    value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador pede reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
+                    inline=False
+                )
+
+                embed_faq_unico.add_field(
+                    name="❓ — Alguma coisa é liberada sem ambas as partes ?",
+                    value=(
+                        "Não, a troca enquanto decorre é analisada por supervisores e nada pode ser liberado sem o acordo de ambas as partes. Caso uma das partes seja desonesta ou suma da troca, tomaremos a melhor decisão analisando a troca.\n\n"
+                        "Por exemplo, o vendedor sumiu no meio da troca sem te entregar o produto, nós te reembolsaríamos analisando o chat da troca."
+                    ),
+                    inline=False
+                )
+
+                await canal_faq.send(embed=embed_faq_unico)
+                await canal_faq.send(content=url_gif_divisor)
+                print("✅ FAQ Automático Updated!")
+            except Exception as e:
+                print(f"❌ Erro ao reproduzir mensagens do FAQ: {e}")
+        
+        bot_inicializado = True
+
+@bot.command()
+async def funcoes(ctx):
+    view_funcoes = SelecaoFuncoesView(ctx.guild)
+    await ctx.send(embed=view_funcoes.gerar_embed(), view=view_funcoes)
+
+@bot.command()
+async def fechar(ctx):
+    if not any(role.id == ID_CARGO_STAFF for role in ctx.author.roles):
+        await ctx.send("❌ Apenas membros da Staff podem fechar este ticket.", delete_after=5)
+        return
+        
+    await ctx.send("🛑 **Deletando este canal de atendimento em 3 seconds...**")
+    await asyncio.sleep(3)
+    DADOS_TICKETS.pop(ctx.channel.id, None)
+    await ctx.channel.delete()
+
+async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
+    guild = destino.guild
+    trade = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
+    money = pegar_emoji(guild, "discotoolsxyzicon22", "💲")
+    users = pegar_emoji(guild, "discotoolsxyzicon23", "👥")
+    calendar = pegar_emoji(guild, "discotoolsxyzicon24", "📅")
+
+    agora = datetime.now().strftime("%d de %B de %Y %H:%M")
+    meses = {
+        "January": "janeiro", "February": "fevereiro", "March": "março", 
+        "April": "abril", "May": "maio", "June": "junho", 
+        "July": "julho", "August": "agosto", "September": "setembro", 
+        "October": "outubro", "November": "novembro", "December": "dezembro"
+    }
+    for eng, pt in meses.items(): agora = agora.replace(eng, pt)
+
+    # Garante que não quebrará caso a lista possua menos de 2 elementos por erro externo
+    if len(IDS_REAIS) >= 2:
+        id_p1 = random.choice(IDS_REAIS)
+        id_p2 = random.choice(IDS_REAIS)
+        while id_p1 == id_p2: id_p2 = random.choice(IDS_REAIS)
+    else:
+        id_p1, id_p2 = 0, 0
+
+    texto_titulo = "Big vouch" if eh_big else "vouch"
+    embed = discord.Embed(
+        title=f"{str(trade)} ━ Troca de PIX {texto_titulo}. ({tipo})",
+        description=f"Uma troca de pix {tipo.lower()} aconteceu, informações abaixo:\n\u200b",
+        color=COR_ROXA
+    )
+    
+    valor_texto = (
+        f"• {str(money)} **Valor:** {formatar_valor(valor)}\n"
+        f"• {str(users)} **Participantes:** <@{id_p1}> e <@{id_p2}>\n"
+        f"• {str(calendar)} **Horário:** {agora}\n"
+        f"• 👤 **Middleman:** <@{ID_MM_FIXO}>"
+    )
+
+    embed.add_field(name="", value=valor_texto, inline=False)
+    await destino.send(embed=embed)
+
+@bot.command()
+async def registrarbv(ctx, quantidade: int):
+    global parar_envio
+    parar_envio = False
+    for _ in range(quantidade):
+        if parar_envio: break
+        await gerador_de_vouch_base(ctx.channel, random.choice(["Automático", "Manual"]), round(random.uniform(1000.0, 10000.0), 2), eh_big=True)
+        await asyncio.sleep(0.5)
+
+@bot.command()
+async def registrarv(ctx, quantidade: int):
+    global parar_envio
+    parar_envio = False
+    for _ in range(quantidade):
+        if parar_envio: break
+        await gerador_de_vouch_base(ctx.channel, random.choice(["Automático", "Manual"]), round(random.uniform(5.0, 1000.0), 2), eh_big=False)
+        await asyncio.sleep(0.5)
+
+@bot.command()
+async def stop(ctx):
+    global parar_envio
+    parar_envio = True
+    await ctx.send("🛑 **O envio de mensagens automáticas via comando foi parado com sucesso!**")
+
+bot.run(TOKEN)
