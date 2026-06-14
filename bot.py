@@ -157,15 +157,27 @@ class PainelTicketV2(discord.ui.LayoutView):
 
         emoji_icon = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
 
+       class PainelTicketV2(discord.ui.LayoutView):
+    def __init__(self, guild):
+        super().__init__(timeout=None)
+
+        emoji_icon = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
+
         container = discord.ui.Container(
             accent_color=discord.Color(COR_ROXA)
         )
 
-      container.add_item(
-    discord.ui.MediaGallery(
-        discord.MediaGalleryItem(URL_IMAGEM_TICKET)
-    )
-)
+        container.add_item(
+            discord.ui.MediaGallery(
+                discord.MediaGalleryItem(URL_IMAGEM_TICKET)
+            )
+        )
+
+        container.add_item(
+            discord.ui.TextDisplay(
+                f"### {str(emoji_icon)}   ━   Solicitar MM"
+            )
+        )
 
         container.add_item(
             discord.ui.TextDisplay(
