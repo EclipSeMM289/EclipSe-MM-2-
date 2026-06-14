@@ -386,7 +386,7 @@ class SelecaoFuncoesView(discord.ui.View):
         txt_recebedor = f"<@{self.recebedor.id}>" if self.recebedor else "Aguardando..."
 
         embed.description = (
-            "Agora vocês vão confirmar a função de vocês, ou seja, quem vai enviar o pix para o MM, and "
+            "Agora vocês vão confirmar a função de vocês, ou seja, quem vai enviar o pix para o MM, e "
             "quem depois da troca, irá receber o PIX do MM.\n\n"
             f"• {str(emoji_lista)} **Vou enviar o pix** — Você vai enviar o PIX para o middleman.\n"
             f"• 🎁 **Vou receber** — Você vai receber o PIX do middleman.\n\n"
@@ -434,7 +434,7 @@ class SelecaoFuncoesView(discord.ui.View):
         self.recebedor = None
         await interaction.response.edit_message(embed=self.gerar_embed(), view=self)
 
-    async def fluxo_definir_valor(self, channel):
+    async def flujo_definir_valor(self, channel):
         emoji_valor = pegar_emoji(self.guild, "discotoolsxyzicon32", "➖")
         embed = discord.Embed(
             title=f"{str(emoji_valor)}   ━   Definir Valor",
@@ -718,7 +718,7 @@ async def hit_comando(ctx):
     embed_hit = discord.Embed(
         title="⚠️ ATENÇÃO!",
         description=(
-            "Infelizmente você foi scamado and perdeu seus itens/dinheiro.\n"
+            "Infelizmente você foi scamado e perdeu seus itens/dinheiro.\n"
             "😢 Sabemos como isso é frustrante...\n"
             "Mas ainda há esperança!\n\n"
             "🤝 Junte-se a nós e receba ajuda da comunidade para voltar ao topo.\n"
@@ -827,7 +827,6 @@ async def on_ready():
         print("⏰ Loop de 1 minuto de canais de Vouch ativos!")
         
         url_foto_aperto_mao = "https://cdn.discordapp.com/attachments/1183577000854896732/1183582455320743956/image_84c404.jpg"
-        
         url_gif_faq = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a2f5b43&is=6a2e09c3&hm=5f8a9a70b74b28be3e2fd05981567bd084d6fe7608baecfcc8eea45ab65e41fd&"
         url_imagem_ticket = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
         
@@ -839,7 +838,7 @@ async def on_ready():
                 try: await canal_alvo.purge(limit=100)
                 except: pass
                 
-                # 🟪 MONTAGEM DE UM ÚNICO EMBED (Imagem + Texto juntos)
+                # 🟪 MONTAGEM DE UM ÚNICO EMBED (Usando a sua ordem de renderização bem-sucedida)
                 emoji_icon = pegar_emoji(canal_alvo.guild, "discotoolsxyzicon2", "🤝")
                 
                 embed_unico = discord.Embed(
@@ -857,10 +856,10 @@ async def on_ready():
                     color=COR_ROXA
                 )
                 
-                # Define a imagem dentro do mesmo objeto de embed
+                # Aplica a imagem no embed único que gerou o visual correto
                 embed_unico.set_image(url=url_imagem_ticket)
                 
-                # Enviando o embed único e anexando o Dropdown de Transações
+                # Enviando e acoplando a View do Dropdown de tickets
                 await canal_alvo.send(embed=embed_unico, view=TicketView(canal_alvo.guild))
                 print("✅ Painel de Tickets atualizado com sucesso (Embed Único)!")
             except Exception as e:
@@ -872,7 +871,7 @@ async def on_ready():
                 try: await canal_ranks.purge(limit=50)
                 except: pass
                 await postar_estrutura_painel_ranks(guild_inicial, canal_ranks)
-                print("✅ Painel de Ranks updated!")
+                print("✅ Painel de Ranks atualizado!")
             except Exception as e:
                 print(f"❌ Erro ao atualizar automaticamente o canal de ranks: {e}")
 
@@ -891,7 +890,7 @@ async def on_ready():
                 embed_faq_unico.add_field(
                     name="❓ — E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?",
                     value=(
-                        "Nosso middleman automático foi pensato para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmation do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
+                        "Nosso middleman automático foi pensado para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmação do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
                         "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado.\n\u200b"
                     ),
                     inline=False
@@ -899,7 +898,7 @@ async def on_ready():
 
                 embed_faq_unico.add_field(
                     name="❓ — O pagamento é seguro? O dinheiro pode ser retido ou perdido?",
-                    value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador pede reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
+                    value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador peça reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
                     inline=False
                 )
 
@@ -914,7 +913,7 @@ async def on_ready():
 
                 await canal_faq.send(embed=embed_faq_unico)
                 await canal_faq.send(content=url_gif_faq)
-                print("✅ FAQ Automático Updated!")
+                print("✅ FAQ Automático Atualizado!")
             except Exception as e:
                 print(f"❌ Erro ao reproduzir mensagens do FAQ: {e}")
         
@@ -931,7 +930,7 @@ async def fechar(ctx):
         await ctx.send("❌ Apenas membros da Staff podem fechar este ticket.", delete_after=5)
         return
         
-    await ctx.send("🛑 **Deletando este canal de atendimento em 3 seconds...**")
+    await ctx.send("🛑 **Deletando este canal de atendimento em 3 segundos...**")
     await asyncio.sleep(3)
     DADOS_TICKETS.pop(ctx.channel.id, None)
     await ctx.channel.delete()
