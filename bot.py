@@ -676,10 +676,12 @@ class PainelFAQV2(discord.ui.LayoutView):
             accent_color=discord.Color(COR_ROXA)
         )
 
+        emoji_faq = discord.utils.get(bot.emojis, name="p7dro_faq") or "❔"
+
         header.add_item(
             discord.ui.Section(
                 discord.ui.TextDisplay(
-                    "## ❔  ━  FAQ.\n"
+                    f"## {emoji_faq}  ━  FAQ.\n"
                     "Todas as dúvidas frequentes do nosso novo middleman automático de forma organizada aqui! "
                     "Caso tenha outras dúvidas, contacte um staff."
                 ),
