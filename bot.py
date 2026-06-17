@@ -629,8 +629,11 @@ class TicketDropdown(discord.ui.Select):
         )
         msg_sistema = await channel.send(content=membro.mention, embed=embed_interno, view=PainelInternoTicketView(guild))
         
-        try: await msg_sistema.pin()
-        except: pass
+      msg_sistema = await channel.send(
+    content=membro.mention,
+    embed=embed_interno,
+    view=PainelInternoTicketView(guild)
+)
 
 
 class PainelTicketV2(discord.ui.LayoutView):
