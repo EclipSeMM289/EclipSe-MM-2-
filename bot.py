@@ -17,7 +17,10 @@ ID_CANAL_TICKET = 1512267548043776072
 ID_CANAL_FAQ = 1512267542461157536
 ID_CANAL_RANKS = 1512267543643951124  
 ID_CANAL_VOUCH = 1512267549901983867     
-ID_CANAL_BIGVOUCH = 1512267551927963748  
+ID_CANAL_BIGVOUCH = 1512267551927963748                                                                                                                                                                                                                                  
+ID_EMOJI_MM = 1516858625824657609
+ID_EMOJI_TRADE_PIX = 1516858640345207014
+ID_EMOJI_CROSS = 1516858636389843195  
 
 # 👑 CARGOS AUTORIZADOS / ESPECÍFICOS:
 ID_CARGO_STAFF = 1512269380094787757
@@ -574,8 +577,8 @@ class PainelInternoTicketView(discord.ui.View):
 
 class TicketDropdown(discord.ui.Select):
     def __init__(self, guild):
-        emoji_pix = pegar_emoji(guild, "discotoolsxyzicon25", "🤝")
-        emoji_cross = pegar_emoji(guild, "discotoolsxyzicon26", "❌")
+        emoji_pix = bot.get_emoji(ID_EMOJI_TRADE_PIX) or "🤝"
+        emoji_cross = bot.get_emoji(ID_EMOJI_CROSS) or "❌"
         options = [
             discord.SelectOption(label="Trade PIX", description="Intermediação de pagamento PIX", emoji=emoji_pix),
             discord.SelectOption(label="Cross Trade", description="Indisponível no momento", emoji=emoji_cross)
@@ -600,11 +603,17 @@ class TicketDropdown(discord.ui.Select):
         if cargo_staff:
             overwrites[cargo_staff] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
         
+        categoria = guild.get_channel(ID_CATEGORIA_TICKETS)
+
         nome_canal = f"🏷️・automático {membro.name}"
-        channel = await guild.create_text_channel(name=nome_canal, overwrites=overwrites)
+        channel = await guild.create_text_channel(
+            name=nome_canal,
+            category=categoria,
+            overwrites=overwrites
+        )
         await interaction.response.send_message(f"✅ Seu ticket foi criado em {channel.mention}!", ephemeral=True)
         
-        emoji_ticket = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
+        emoji_ticket = bot.get_emoji(ID_EMOJI_MM) or "🤝"
         embed_interno = discord.Embed(title=f"{str(emoji_ticket)}   ━   Middleman de PIX criado.", color=COR_ROXA)
         embed_interno.description = (
             "Seja bem vindo ao novo ticket **AUTOMÁTICO** de MiddleMan, com segurança e agilidade. É "
@@ -627,7 +636,7 @@ class PainelTicketV2(discord.ui.LayoutView):
     def __init__(self, guild):
         super().__init__(timeout=None)
 
-        emoji_icon = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
+        emoji_icon = bot.get_emoji(ID_EMOJI_MM) or "🤝"
 
         container = discord.ui.Container(
             accent_color=discord.Color(COR_ROXA)
@@ -662,6 +671,7 @@ class PainelTicketV2(discord.ui.LayoutView):
         container.add_item(row)
 
         self.add_item(container)
+
 
 class TicketView(discord.ui.View):
     def __init__(self, guild):
