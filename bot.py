@@ -1014,7 +1014,7 @@ async def fechar(ctx):
 async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
     guild = destino.guild
 
-    emoji_mm = bot.get_emoji(ID_EMOJI_MM) or "🤝"
+    emoji_mm = bot.get_emoji(ID_EMOJI_MM) or pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
     emoji_money = pegar_emoji(guild, "discotoolsxyzicon22", "💲")
     emoji_users = pegar_emoji(guild, "discotoolsxyzicon23", "👥")
     emoji_calendar = pegar_emoji(guild, "discotoolsxyzicon24", "📅")
@@ -1048,36 +1048,20 @@ async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
     else:
         id_p1, id_p2 = 0, 0
 
-    titulo = (
-        "Big Vouch Completo. (Automático)"
-        if eh_big
-        else "Troca de PIX completa. (Automático)"
-    )
+    titulo = "Big Vouch completo. (Automático)" if eh_big else "Troca de PIX completa. (Automático)"
 
     embed = discord.Embed(
-        title=f"{emoji_mm}  ━  {titulo}",
-        description="> Uma troca de pix automática aconteceu, informações abaixo:",
+        title=f"{str(emoji_mm)}   ━   {titulo}",
+        description=(
+            "> Uma troca de pix automática aconteceu, informações abaixo:\n\n"
+            f"• {str(emoji_money)}  **Valor:** {formatar_valor(valor)}\n"
+            f"• {str(emoji_users)}  **Participantes:** <@{id_p1}> e <@{id_p2}>\n"
+            f"• {str(emoji_calendar)}  **Horário:** {agora}"
+        ),
         color=COR_ROXA
     )
 
-    embed.add_field(
-        name="",
-        value=(
-            f"• {emoji_money} **Valor:** `{formatar_valor(valor)}`\n"
-            f"• {emoji_users} **Participantes:** <@{id_p1}> e <@{id_p2}>\n"
-            f"• {emoji_calendar} **Horário:** {agora}"
-        ),
-        inline=False
-    )
-
-    msg = await destino.send(embed=embed)
-
-    try:
-        await msg.add_reaction("✅")
-        await msg.add_reaction("❌")
-        await msg.add_reaction("❤️")
-    except:
-        pass
+    await destino.send(embed=embed)
 
 
 @bot.command()
