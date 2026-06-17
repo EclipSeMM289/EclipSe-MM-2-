@@ -39,6 +39,8 @@ bot = commands.Bot(command_prefix=["!", "?", "+"], intents=intents, help_command
 
 COR_ROXA = 0xA020F0
 URL_IMAGEM_TICKET = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
+URL_IMAGEM_MAO_FAQ = "https://media.discordapp.net/attachments/1475513995053240442/1491435990387261460/b3498cb552254d239cf6e2335b85f565.png?ex=6a33f881&is=6a32a701&hm=5bf7f9ae08a3ff7093e12b4d0a80c509ebb2e560b409fc6dbab7a730aa21cb90&=&format=webp&quality=lossless&width=960&height=960"
+URL_GIF_FAQ = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a33f883&is=6a32a703&hm=b4badfe894acf2cc41c64bd23a0900cfd3b6beb84255cd14b7cd737160b58ad6&"
 parar_envio = False
 bot_inicializado = False  # Flag para evitar re-execução no on_ready
 DADOS_TICKETS = {}
@@ -604,16 +606,12 @@ class TicketDropdown(discord.ui.Select):
         if cargo_staff:
             overwrites[cargo_staff] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
         
+        nome_canal = f"🏷️・automático {membro.name}"
         categoria = guild.get_channel(ID_CATEGORIA_TICKETS)
-        nome_canal = f"🏷️・automático-{membro.name}"
-        channel = await guild.create_text_channel(
-            name=nome_canal,
-            category=categoria,
-            overwrites=overwrites
-        )
+        channel = await guild.create_text_channel(name=nome_canal, category=categoria, overwrites=overwrites)
         await interaction.response.send_message(f"✅ Seu ticket foi criado em {channel.mention}!", ephemeral=True)
         
-        emoji_ticket = bot.get_emoji(ID_EMOJI_MM) or "🤝"
+        emoji_ticket = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
         embed_interno = discord.Embed(title=f"{str(emoji_ticket)}   ━   Middleman de PIX criado.", color=COR_ROXA)
         embed_interno.description = (
             "Seja bem vindo ao novo ticket **AUTOMÁTICO** de MiddleMan, com segurança e agilidade. É "
@@ -626,7 +624,8 @@ class TicketDropdown(discord.ui.Select):
             "3. O bot pedirá para descreverem o valor e os itens no chat.\n"
             "4. Após confirmação, o pix seguro é gerado."
         )
-        await channel.send(content=membro.mention, embed=embed_interno, view=PainelInternoTicketView(guild))
+        msg_sistema = await channel.send(content=membro.mention, embed=embed_interno, view=PainelInternoTicketView(guild))
+
 
 
 class PainelTicketV2(discord.ui.LayoutView):
@@ -668,6 +667,81 @@ class PainelTicketV2(discord.ui.LayoutView):
         container.add_item(row)
 
         self.add_item(container)
+
+
+class PainelFAQV2(discord.ui.LayoutView):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+        header = discord.ui.Container(
+            accent_color=discord.Color(COR_ROXA)
+        )
+
+        header.add_item(
+            discord.ui.Section(
+                discord.ui.TextDisplay(
+                    "## ❔  ━  FAQ.\n"
+                    "Todas as dúvidas frequentes do nosso novo middleman automático de forma organizada aqui! "
+                    "Caso tenha outras dúvidas, contacte um staff."
+                ),
+                accessory=discord.ui.Thumbnail(URL_IMAGEM_MAO_FAQ)
+            )
+        )
+
+        self.add_item(header)
+
+        pergunta1 = discord.ui.Container(
+            accent_color=discord.Color(COR_ROXA)
+        )
+
+        pergunta1.add_item(
+            discord.ui.TextDisplay(
+                "### ❔  ━  E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?\n\n"
+                "Nosso middleman automático foi pensado para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmação do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
+                "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado."
+            )
+        )
+
+        self.add_item(pergunta1)
+
+        pergunta2 = discord.ui.Container(
+            accent_color=discord.Color(COR_ROXA)
+        )
+
+        pergunta2.add_item(
+            discord.ui.TextDisplay(
+                "### ❔  ━  O pagamento é seguro? O dinheiro pode ser retido ou perdido?\n\n"
+                "Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador peça reembolso no banco, a plataforma protege o valor e nada fica retido."
+            )
+        )
+
+        self.add_item(pergunta2)
+
+        pergunta3 = discord.ui.Container(
+            accent_color=discord.Color(COR_ROXA)
+        )
+
+        pergunta3.add_item(
+            discord.ui.TextDisplay(
+                "### ❔  ━  Alguma coisa é liberada sem ambas as partes ?\n\n"
+                "Não, a troca enquanto decorre é analisada por supervisores e nada pode ser liberado sem o acordo de ambas as partes. Caso uma das partes seja desonesta ou suma da troca, tomaremos a melhor decisão analisando a troca.\n\n"
+                "Por exemplo, o vendedor sumiu no meio da troca sem te entregar o produto, nós te reembolsaríamos analisando o chat da troca."
+            )
+        )
+
+        self.add_item(pergunta3)
+
+        gif = discord.ui.Container(
+            accent_color=discord.Color.green()
+        )
+
+        gif.add_item(
+            discord.ui.MediaGallery(
+                discord.MediaGalleryItem(URL_GIF_FAQ)
+            )
+        )
+
+        self.add_item(gif)
 
 class TicketView(discord.ui.View):
     def __init__(self, guild):
@@ -908,45 +982,16 @@ async def on_ready():
         canal_faq = bot.get_channel(ID_CANAL_FAQ)
         if canal_faq:
             try:
-                try: await canal_faq.purge(limit=100)
-                except: pass
-                
-                embed_faq_unico = discord.Embed(color=COR_ROXA)
-                embed_faq_unico.set_thumbnail(url=url_foto_aperto_mao)
-                
-                embed_faq_unico.title = "❓ — FAQ."
-                embed_faq_unico.description = "Todas as dúvidas frequentes do nosso novo middleman automático de forma organizada aqui! Caso tenha outras dúvidas, contacte um staff.\n\u200b"
+                try:
+                    await canal_faq.purge(limit=100)
+                except:
+                    pass
 
-                embed_faq_unico.add_field(
-                    name="❓ — E se o vendedor não me entregar o produto após eu pagar ou o cliente não confirmar que recebeu ?",
-                    value=(
-                        "Nosso middleman automático foi pensato para ser seguro em literalmente qualquer etapa, por isso temos uma função chamada abrir disputa que é disponibilizada logo após a confirmation do pagamento. Você pode usar essa função para qualquer irregularidade na sua troca, que assim um supervisor será contactado para entender a irregularidade e tomar a melhor decisão\n\n"
-                        "Você pode usar a disputa caso você não receba o produto ou o comprador não confirme a entrega, que o supervisor irá analisar sua troca, mensagens trocadas e etc, que assim o seu valor será retornado/reembolsado.\n\u200b"
-                    ),
-                    inline=False
-                )
-
-                embed_faq_unico.add_field(
-                    name="❓ — O pagamento é seguro? O dinheiro pode ser retido ou perdido?",
-                    value="Não, temos uma integração com gateways gigantes e seguras, que garante que o seu dinheiro ficará conosco de forma segura, nada é perdido com MED (contestação). Mesmo que o comprador pede reembolso no banco, a plataforma protege o valor e nada fica retido.\n\u200b",
-                    inline=False
-                )
-
-                embed_faq_unico.add_field(
-                    name="❓ — Alguma coisa é liberada sem ambas as partes ?",
-                    value=(
-                        "Não, a troca enquanto decorre é analisada por supervisores e nada pode ser liberado sem o acordo de ambas as partes. Caso uma das partes seja desonesta ou suma da troca, tomaremos a melhor decisão analisando a troca.\n\n"
-                        "Por exemplo, o vendedor sumiu no meio da troca sem te entregar o produto, nós te reembolsaríamos analisando o chat da troca."
-                    ),
-                    inline=False
-                )
-
-                await canal_faq.send(embed=embed_faq_unico)
-                await canal_faq.send(content=url_gif_faq)
-                print("✅ FAQ Automático Updated!")
+                await canal_faq.send(view=PainelFAQV2())
+                print("✅ FAQ Automático atualizado com Components V2!")
             except Exception as e:
                 print(f"❌ Erro ao reproduzir mensagens do FAQ: {e}")
-        
+
         bot_inicializado = True
 
 @bot.command()
