@@ -40,8 +40,7 @@ bot = commands.Bot(command_prefix=["!", "?", "+"], intents=intents, help_command
 COR_ROXA = 0xA020F0
 URL_IMAGEM_TICKET = "https://cdn.eclipsebuxx.com/chat/MMEMBED.png"
 URL_IMAGEM_MAO_FAQ = "https://media.discordapp.net/attachments/1475513995053240442/1491435990387261460/b3498cb552254d239cf6e2335b85f565.png?ex=6a33f881&is=6a32a701&hm=5bf7f9ae08a3ff7093e12b4d0a80c509ebb2e560b409fc6dbab7a730aa21cb90&=&format=webp&quality=lossless&width=960&height=960"
-URL_GIF_FAQ = "https://cdn.discordapp.com/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif?ex=6a33f883&is=6a32a703&hm=b4badfe894acf2cc41c64bd23a0900cfd3b6beb84255cd14b7cd737160b58ad6&"
-parar_envio = False
+URL_GIF_FAQ = "https://media.discordapp.net/attachments/1475513995053240442/1491436000067715204/5c7d37c02d7a40abf85cfa4140547a48.gif"
 bot_inicializado = False  # Flag para evitar re-execução no on_ready
 DADOS_TICKETS = {}
 
