@@ -14,7 +14,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 
 # 📥 CONFIGURAÇÃO DE CANAIS (IDs Atualizadas):
 ID_CANAL_TICKET = 1512267548043776072
-ID_CATEGORIA_TICKETS = 1512267554926891008
+ID_CATEGORIA_TICKETS = 1513339617951223869
 ID_CANAL_FAQ = 1512267542461157536
 ID_CANAL_RANKS = 1512267543643951124  
 ID_CANAL_VOUCH = 1512267549901983867     
@@ -605,8 +605,7 @@ class TicketDropdown(discord.ui.Select):
             overwrites[cargo_staff] = discord.PermissionOverwrite(read_messages=True, send_messages=True)
         
         categoria = guild.get_channel(ID_CATEGORIA_TICKETS)
-
-        nome_canal = f"🏷️・automático {membro.name}"
+        nome_canal = f"🏷️・automático-{membro.name}"
         channel = await guild.create_text_channel(
             name=nome_canal,
             category=categoria,
@@ -627,13 +626,7 @@ class TicketDropdown(discord.ui.Select):
             "3. O bot pedirá para descreverem o valor e os itens no chat.\n"
             "4. Após confirmação, o pix seguro é gerado."
         )
-        msg_sistema = await channel.send(content=membro.mention, embed=embed_interno, view=PainelInternoTicketView(guild))
-        
-      msg_sistema = await channel.send(
-    content=membro.mention,
-    embed=embed_interno,
-    view=PainelInternoTicketView(guild)
-)
+        await channel.send(content=membro.mention, embed=embed_interno, view=PainelInternoTicketView(guild))
 
 
 class PainelTicketV2(discord.ui.LayoutView):
@@ -675,7 +668,6 @@ class PainelTicketV2(discord.ui.LayoutView):
         container.add_item(row)
 
         self.add_item(container)
-
 
 class TicketView(discord.ui.View):
     def __init__(self, guild):
