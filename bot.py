@@ -1013,44 +1013,72 @@ async def fechar(ctx):
 
 async def gerador_de_vouch_base(destino, tipo, valor, eh_big):
     guild = destino.guild
-    trade = pegar_emoji(guild, "discotoolsxyzicon2", "🤝")
-    money = pegar_emoji(guild, "discotoolsxyzicon22", "💲")
-    users = pegar_emoji(guild, "discotoolsxyzicon23", "👥")
-    calendar = pegar_emoji(guild, "discotoolsxyzicon24", "📅")
+
+    emoji_mm = bot.get_emoji(ID_EMOJI_MM) or "🤝"
+    emoji_money = pegar_emoji(guild, "discotoolsxyzicon22", "💲")
+    emoji_users = pegar_emoji(guild, "discotoolsxyzicon23", "👥")
+    emoji_calendar = pegar_emoji(guild, "discotoolsxyzicon24", "📅")
 
     agora = datetime.now().strftime("%d de %B de %Y %H:%M")
-    meses = {
-        "January": "janeiro", "February": "fevereiro", "March": "março", 
-        "April": "abril", "May": "maio", "June": "junho", 
-        "July": "julho", "August": "agosto", "September": "setembro", 
-        "October": "outubro", "November": "novembro", "December": "dezembro"
-    }
-    for eng, pt in meses.items(): agora = agora.replace(eng, pt)
 
-    # Garante que não quebrará caso a lista possua menos de 2 elementos por erro externo
+    meses = {
+        "January": "janeiro",
+        "February": "fevereiro",
+        "March": "março",
+        "April": "abril",
+        "May": "maio",
+        "June": "junho",
+        "July": "julho",
+        "August": "agosto",
+        "September": "setembro",
+        "October": "outubro",
+        "November": "novembro",
+        "December": "dezembro"
+    }
+
+    for eng, pt in meses.items():
+        agora = agora.replace(eng, pt)
+
     if len(IDS_REAIS) >= 2:
         id_p1 = random.choice(IDS_REAIS)
         id_p2 = random.choice(IDS_REAIS)
-        while id_p1 == id_p2: id_p2 = random.choice(IDS_REAIS)
+
+        while id_p1 == id_p2:
+            id_p2 = random.choice(IDS_REAIS)
     else:
         id_p1, id_p2 = 0, 0
 
-    texto_titulo = "Big vouch" if eh_big else "vouch"
-    embed = discord.Embed(
-        title=f"{str(trade)} ━ Troca de PIX {texto_titulo}. ({tipo})",
-        description=f"Uma troca de pix {tipo.lower()} aconteceu, informações abaixo:\n\u200b",
-        color=COR_ROXA
-    )
-    
-    valor_texto = (
-        f"• {str(money)} **Valor:** {formatar_valor(valor)}\n"
-        f"• {str(users)} **Participantes:** <@{id_p1}> e <@{id_p2}>\n"
-        f"• {str(calendar)} **Horário:** {agora}\n"
-        f"• 👤 **Middleman:** <@{ID_MM_FIXO}>"
+    titulo = (
+        "Big Vouch Completo. (Automático)"
+        if eh_big
+        else "Troca de PIX completa. (Automático)"
     )
 
-    embed.add_field(name="", value=valor_texto, inline=False)
-    await destino.send(embed=embed)
+    embed = discord.Embed(
+        title=f"{emoji_mm}  ━  {titulo}",
+        description="> Uma troca de pix automática aconteceu, informações abaixo:",
+        color=COR_ROXA
+    )
+
+    embed.add_field(
+        name="",
+        value=(
+            f"• {emoji_money} **Valor:** `{formatar_valor(valor)}`\n"
+            f"• {emoji_users} **Participantes:** <@{id_p1}> e <@{id_p2}>\n"
+            f"• {emoji_calendar} **Horário:** {agora}"
+        ),
+        inline=False
+    )
+
+    msg = await destino.send(embed=embed)
+
+    try:
+        await msg.add_reaction("✅")
+        await msg.add_reaction("❌")
+        await msg.add_reaction("❤️")
+    except:
+        pass
+
 
 @bot.command()
 async def registrarbv(ctx, quantidade: int):
